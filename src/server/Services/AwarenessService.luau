@@ -16,12 +16,14 @@ local AwarenessService = Knit.CreateService {
 
 AwarenessService.DataService = nil
 AwarenessService.UpgradeService = nil
+AwarenessService.LevelService = nil
 
 AwarenessService.AwarenessChanged = Signal.new() -- Fires (player, newAwareness)
 
 function AwarenessService:KnitStart()
     self.DataService = Knit.GetService("DataService")
     self.UpgradeService = Knit.GetService("UpgradeService")
+    self.LevelService = Knit.GetService("LevelService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         if not profile then return end
@@ -66,6 +68,8 @@ function AwarenessService:InitializePlayer(player, profile)
             end
 
             AwarenessService:AddAwareness(player, finalIncrement, isDeepThought)
+            self.LevelService:AddXP(player, 2)
+            
             task.wait(interval)
         end
     end)

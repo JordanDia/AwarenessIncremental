@@ -68,7 +68,6 @@ return function(parent)
     }
 
     -- Add rebirth board configuration
-    print(RebirthService:GetTotalRebirthsToGain())
     local rebirthBoard = {
         Part = workspace.UpgradeBoards:WaitForChild("RebirthBoard"),
         

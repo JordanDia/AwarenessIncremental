@@ -6,16 +6,17 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local scoped = Fusion.scoped
 
 local CurrencyFrame = require("../components/CurrencyFrame")
+local LevelBar = require("../components/LevelBar")
 
 return function(parent)
     local scope = scoped(Fusion, {
-        CurrencyFrame = CurrencyFrame
+        CurrencyFrame = CurrencyFrame,
+        LevelBar = LevelBar
     })
-
-    local player = Players.LocalPlayer
     
     local AwarenessService = Knit.GetService("AwarenessService")
     local RebirthService = Knit.GetService("RebirthService")
+    local LevelService = Knit.GetService("LevelService")
 
     local awarenessValue = scope:Value(AwarenessService:GetAwareness())
     AwarenessService.AwarenessChanged:Connect(function(newAwareness)
@@ -27,6 +28,38 @@ return function(parent)
     RebirthService.RebirthsChanged:Connect(function(newRebirths)
         --print("Rebirths updated to", newRebirths)
         rebirthValue:set(newRebirths)
+    end)
+
+
+
+    -- Level System
+    local level = LevelService:GetLevel()
+    local currentXP, neededXP = LevelService:GetXPProgress()
+    
+    local levelValue = scope:Value(level)
+    local currentXPValue = scope:Value(currentXP)
+    local neededXPValue = scope:Value(neededXP)
+
+    -- Function to update level UI
+    local function UpdateLevelUI()
+        local level = LevelService:GetLevel()
+        local currentXP, neededXP = LevelService:GetXPProgress()
+        
+        levelValue:set(level)
+        currentXPValue:set(currentXP)
+        neededXPValue:set(neededXP)
+    end
+
+    -- Initial update
+    UpdateLevelUI()
+
+    -- Listen for XP changes
+    LevelService.XPChanged:Connect(UpdateLevelUI)
+
+    -- Listen for level changes
+    LevelService.LevelChanged:Connect(function(newLevel, oldLevel)
+        UpdateLevelUI()
+        --print(`Level up! {oldLevel} -> {newLevel}`)
     end)
 
     local screenGui = scope:New "ScreenGui" {
@@ -49,6 +82,12 @@ return function(parent)
                 Value = rebirthValue,
                 Icon = "rbxassetid://87766693277427",
                 TextColor3 = Color3.fromRGB(0, 153, 255),
+            },
+
+            scope:LevelBar {
+                Level = levelValue,
+                CurrentXP = currentXPValue,
+                NeededXP = neededXPValue
             }
         }
     }

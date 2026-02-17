@@ -16,6 +16,10 @@ DataService.ProfileLoaded = Signal.new()
 local PROFILE_TEMPLATE = {
 	Awareness = 0,
 	Rebirths = 0,
+	Crystals = 0,
+
+	XP = 0,
+	Level = 1,
 
 	Upgrades = {
 		AwarenessPerMeditation = 1,
@@ -26,7 +30,23 @@ local PROFILE_TEMPLATE = {
 		MultiplyAwarenessPerMeditation = 1,
 		MultiplyRebirthAmount = 1,
 		IncreaseDeepThoughtChance = 1,
-	}
+	},
+
+	-- New: Upgrade Tree Data
+    UnlockedNodes = {
+        -- Dynamically populated per tree
+        -- Example: Tree1 = { RootNode = true, NodeA = false }
+
+		Tree1 = {},
+    },
+
+	PurchasedNodes = {
+
+
+		Tree1 = {},
+	},
+
+	Unlocks = {},
 
 }
 

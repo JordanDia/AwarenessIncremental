@@ -151,7 +151,7 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 		-- Fire event once with final level
 		self.Client.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
 		
-		print(`Player {player.Name} bought {levelsToBuy} levels of {upgradeId}. Total cost: {totalCost}`)
+		--print(`Player {player.Name} bought {levelsToBuy} levels of {upgradeId}. Total cost: {totalCost}`)
 	end
 
 	return levelsToBuy
@@ -186,7 +186,7 @@ function UpgradeService:GetNextUpgradeEffect(player, upgradeId)
 
     local level = upgradeTable[upgradeId] or 0
 	if config.MaxLevel and level >= config.MaxLevel then
-        print("Reached max level for", upgradeId, "at level", level)
+        --print("Reached max level for", upgradeId, "at level", level)
 		return config.EffectPerLevel(level) -- Return current effect if at max level
 	end
 

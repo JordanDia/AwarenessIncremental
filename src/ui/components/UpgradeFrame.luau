@@ -117,7 +117,6 @@ return function(
                     local level = props.Level and use(props.Level) or 0
                     local maxLevel = props.MaxLevel and use(props.MaxLevel) or 0
                     if level >= maxLevel then
-                        print("Equal")
                         return `Value: +{ currentValue }`
                     end
 
