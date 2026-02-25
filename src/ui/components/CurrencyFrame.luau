@@ -8,19 +8,22 @@ return function(
     props: {
         Name: string?,
         Position: UDim2,
+        Size: UDim2,
         Value: Fusion.UsedAs<number>,
         Icon: string,
         TextColor3: Color3,
+        LayoutOrder: number,
         Parent: Instance?
     }
 ) : Fusion.Child
     
     return scope:New "Frame" {
         Name = props.Name,
-        Size = UDim2.fromScale(0.18, 0.08),
+        Size = props.Size,
         Position = props.Position,
         BackgroundColor3 = Color3.fromRGB(0, 0, 0),
         BackgroundTransparency = 0.5,
+        LayoutOrder = props.LayoutOrder,
         Parent = props.Parent,
 
         [Fusion.Children] = {

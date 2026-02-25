@@ -17,6 +17,7 @@ function UpgradeTreeService:KnitStart()
     self.DataService = Knit.GetService("DataService")
     self.AwarenessService = Knit.GetService("AwarenessService")
     self.RebirthService = Knit.GetService("RebirthService")
+    self.CrystalService = Knit.GetService("CrystalService")
     self.UnlockService = Knit.GetService("UnlockService")
     
     -- Listen for new players
@@ -40,10 +41,10 @@ function UpgradeTreeService:KnitStart()
             Remove = function(player, amount) return self.RebirthService:RemoveRebirths(player, amount) end,
         },
 
-        -- Crystals = {
-        --     Get = function(player) return self.CrystalService:GetCrystals(player) end,
-        --     Remove = function(player, amount) return self.CrystalService:RemoveCrystals(player, amount) end,
-        -- },
+        Crystals = {
+            Get = function(player) return self.CrystalService:GetCrystals(player) end,
+            Remove = function(player, amount) return self.CrystalService:RemoveCrystals(player, amount) end,
+        },
     }
 
     -- Setup interactions after all services are started

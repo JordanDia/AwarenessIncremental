@@ -17,55 +17,126 @@ return function(parent)
 
     local RebirthService = Knit.GetService("RebirthService")
     local UpgradeService = Knit.GetService("UpgradeService")
-    
+
+    local function MakeUpgradeBoard(upgradeId, part, description, icon, units)
+        return {
+            UpgradeId = upgradeId,
+            Part = part,
+            Description = description,
+            Icon = icon,
+            Units = units,
+            Level = scope:Value(UpgradeService:GetLevel(upgradeId)),
+            MaxLevel = UpgradeService:GetMaxLevel(upgradeId),
+            CurrentValue = scope:Value(UpgradeService:GetUpgradeEffect(upgradeId)),
+            NextValue = scope:Value(UpgradeService:GetNextUpgradeEffect(upgradeId)),
+            Cost = scope:Value(UpgradeService:GetNextCost(upgradeId)),
+            OnBuyOne = function()
+                UpgradeService:BuyUpgrade(upgradeId)
+            end,
+            OnBuyMax = function()
+                UpgradeService:BuyMaxUpgrade(upgradeId)
+            end,
+        }
+    end
+
+    -- Helper to mount an UpgradeFrame SurfaceGui onto a part
+    local function MountUpgradeGui(board)
+        return scope:New "SurfaceGui" {
+            Name = board.UpgradeId,
+            Adornee = board.Part,
+            Face = Enum.NormalId.Front,
+            Parent = parent,
+
+            [Fusion.Children] = {
+                scope:UpgradeFrame {
+                    Level = board.Level,
+                    MaxLevel = board.MaxLevel,
+                    Description = board.Description,
+                    Icon = board.Icon,
+                    CurrentValue = board.CurrentValue,
+                    NextValue = board.NextValue,
+                    Cost = board.Cost,
+                    Units = board.Units,
+                    OnBuyOne = board.OnBuyOne,
+                    OnBuyMax = board.OnBuyMax,
+                }
+            }
+        }
+    end
+
+    -- Helper to refresh all reactive values on a board
+    local function RefreshBoard(board)
+        board.Level:set(UpgradeService:GetLevel(board.UpgradeId))
+        board.CurrentValue:set(UpgradeService:GetUpgradeEffect(board.UpgradeId))
+        board.NextValue:set(UpgradeService:GetNextUpgradeEffect(board.UpgradeId))
+        board.Cost:set(UpgradeService:GetNextCost(board.UpgradeId))
+    end
+
     local upgradeBoards = {
-        {
-            UpgradeId = "AwarenessPerMeditation",
-            Part = workspace.UpgradeBoards:WaitForChild("MoreAwarenessBoard"),
-            
-            Level = scope:Value(UpgradeService:GetLevel("AwarenessPerMeditation")),
-            MaxLevel = UpgradeService:GetMaxLevel("AwarenessPerMeditation"),
-
-            Description = "Increase awareness per meditation",
-            Icon = "rbxassetid://84930949408431",
-
-            CurrentValue = scope:Value(UpgradeService:GetUpgradeEffect("AwarenessPerMeditation")),
-            NextValue = scope:Value(UpgradeService:GetNextUpgradeEffect("AwarenessPerMeditation")),
-
-            Cost = scope:Value(UpgradeService:GetNextCost("AwarenessPerMeditation")),
-            Units = "Awareness",
-
-            OnBuyOne = function()
-                UpgradeService:BuyUpgrade("AwarenessPerMeditation")
-            end,
-            OnBuyMax = function()
-                --print("Bought max Awareness upgrades")
-                UpgradeService:BuyMaxUpgrade("AwarenessPerMeditation")
-            end
-        },
-        {
-            UpgradeId = "MeditationSpeed",
-            Part = workspace.UpgradeBoards:WaitForChild("MoreMeditationSpeedBoard"),
-            Level = scope:Value(UpgradeService:GetLevel("MeditationSpeed")),
-            MaxLevel = UpgradeService:GetMaxLevel("MeditationSpeed"),
-
-            Description = "Decrease meditation cooldown",
-            Icon = "rbxassetid://74165606343290",
-
-            CurrentValue = scope:Value(UpgradeService:GetUpgradeEffect("MeditationSpeed")),
-            NextValue = scope:Value(UpgradeService:GetNextUpgradeEffect("MeditationSpeed")),
-
-            Cost = scope:Value(UpgradeService:GetNextCost("MeditationSpeed")),
-            Units = "Awareness",
-
-            OnBuyOne = function()
-                UpgradeService:BuyUpgrade("MeditationSpeed")
-            end,
-            OnBuyMax = function()
-                UpgradeService:BuyMaxUpgrade("MeditationSpeed")
-            end
-        },
+        MakeUpgradeBoard("AwarenessPerMeditation", -- UpgradeId
+            workspace.UpgradeBoards:WaitForChild("MoreAwarenessBoard"), -- Board name
+            "Increase awareness per meditation", -- Description
+            "rbxassetid://84930949408431", -- Icon
+            "Awareness" -- Currency
+        ),
+        MakeUpgradeBoard("MeditationSpeed",
+            workspace.UpgradeBoards:WaitForChild("MoreMeditationSpeedBoard"),
+            "Decrease meditation cooldown",
+            "rbxassetid://74165606343290",
+            "Awareness"
+        ),
+        MakeUpgradeBoard("CrystalValue",
+            workspace.UpgradeBoards:WaitForChild("CrystalValueBoard"),
+            "Increase Crystal Value",
+            "rbxassetid://74165606343290",
+            "Crystals"
+        ),
+        MakeUpgradeBoard("CrystalSpeed",
+            workspace.UpgradeBoards:WaitForChild("CrystalSpeedBoard"),
+            "Increase Crystal Spawn Speed",
+            "rbxassetid://74165606343290",
+            "Crystals"
+        ),
+        MakeUpgradeBoard("MaxCrystals",
+            workspace.UpgradeBoards:WaitForChild("MaxCrystalsBoard"),
+            "Increase Max Crystals",
+            "rbxassetid://74165606343290",
+            "Crystals"
+        ),
+        MakeUpgradeBoard("CrystalMultiplier",
+            workspace.UpgradeBoards:WaitForChild("MultiplyCrystalBoard"),
+            "Crystal Value Multiplier",
+            "rbxassetid://74165606343290",
+            "Crystals"
+        ),
+        MakeUpgradeBoard("CrystalAwarenessMultiplier",
+            workspace.UpgradeBoards:WaitForChild("CrystalMultiplyAwarenessBoard"),
+            "Awareness Value Multiplier",
+            "rbxassetid://74165606343290",
+            "Crystals"
+        ),
+        MakeUpgradeBoard("CrystalRebirthMultiplier",
+            workspace.UpgradeBoards:WaitForChild("CrystalMultiplyRebirthBoard"),
+            "Rebirth Value Multiplier",
+            "rbxassetid://74165606343290",
+            "Crystals"
+        ),
     }
+
+    local rebirthUpgradeBoards = {
+        MakeUpgradeBoard("MultiplyAwarenessPerMeditation", workspace.RebirthUpgradeBoards:WaitForChild("MultiplyAwarenessPerMeditation"), "Multiply awareness per meditation",              "rbxassetid://84930949408431",  "Rebirths"),
+        MakeUpgradeBoard("MultiplyRebirthAmount",          workspace.RebirthUpgradeBoards:WaitForChild("MultiplyRebirthAmount"),          "Multiply rebirth amount",                        "rbxassetid://108179584438409", "Rebirths"),
+        MakeUpgradeBoard("IncreaseDeepThoughtChance",      workspace.RebirthUpgradeBoards:WaitForChild("IncreaseDeepThoughtChance"),      "Increase chance to get Deep Thought meditation",  "rbxassetid://109609612189140", "Rebirths"),
+    }
+
+    local allUpgradeBoards = table.move(rebirthUpgradeBoards, 1, #rebirthUpgradeBoards, #upgradeBoards + 1, upgradeBoards)
+
+     -- Mount all upgrade GUIs in one pass
+    for _, board in allUpgradeBoards do
+        MountUpgradeGui(board)
+    end
+    
+    
 
     -- Add rebirth board configuration
     local rebirthBoard = {
@@ -80,96 +151,6 @@ return function(parent)
         end
     }
 
-    local rebirthUpgradeBoards = {
-        {
-            UpgradeId = "MultiplyAwarenessPerMeditation",
-            Part = workspace.RebirthUpgradeBoards:WaitForChild("MultiplyAwarenessPerMeditation"),
-
-            Level = scope:Value(UpgradeService:GetLevel("MultiplyAwarenessPerMeditation")),
-            MaxLevel = UpgradeService:GetMaxLevel("MultiplyAwarenessPerMeditation"),
-
-            Description = "Multiply awareness per meditation",
-            Icon = "rbxassetid://84930949408431",
-
-            CurrentValue = scope:Value(UpgradeService:GetUpgradeEffect("MultiplyAwarenessPerMeditation")),
-            NextValue = scope:Value(UpgradeService:GetNextUpgradeEffect("MultiplyAwarenessPerMeditation")),
-
-            Cost = scope:Value(UpgradeService:GetNextCost("MultiplyAwarenessPerMeditation")),
-            Units = "Rebirths",
-
-            OnBuyOne = function()
-                UpgradeService:BuyUpgrade("MultiplyAwarenessPerMeditation")
-            end,
-            OnBuyMax = function()
-                UpgradeService:BuyMaxUpgrade("MultiplyAwarenessPerMeditation")
-            end
-        },
-        {
-            UpgradeId = "MultiplyRebirthAmount",
-            Part = workspace.RebirthUpgradeBoards:WaitForChild("MultiplyRebirthAmount"),
-
-            Level = scope:Value(UpgradeService:GetLevel("MultiplyRebirthAmount")),
-            MaxLevel = UpgradeService:GetMaxLevel("MultiplyRebirthAmount"),
-
-            Description = "Multiply rebirth amount",
-            Icon = "rbxassetid://108179584438409",
-
-            CurrentValue = scope:Value(UpgradeService:GetUpgradeEffect("MultiplyRebirthAmount")),
-            NextValue = scope:Value(UpgradeService:GetNextUpgradeEffect("MultiplyRebirthAmount")),
-
-            Cost = scope:Value(UpgradeService:GetNextCost("MultiplyRebirthAmount")),
-            Units = "Rebirths",
-
-            OnBuyOne = function()
-                UpgradeService:BuyUpgrade("MultiplyRebirthAmount")
-            end,
-            OnBuyMax = function()
-                UpgradeService:BuyMaxUpgrade("MultiplyRebirthAmount")
-            end
-        },
-        {
-            UpgradeId = "IncreaseDeepThoughtChance",
-            Part = workspace.RebirthUpgradeBoards:WaitForChild("IncreaseDeepThoughtChance"),
-
-            Level = scope:Value(UpgradeService:GetLevel("IncreaseDeepThoughtChance")),
-            MaxLevel = UpgradeService:GetMaxLevel("IncreaseDeepThoughtChance"),
-
-            Description = "Increase chance to get Deep Thought meditation",
-            Icon = "rbxassetid://109609612189140",
-
-            CurrentValue = scope:Value(UpgradeService:GetUpgradeEffect("IncreaseDeepThoughtChance")),
-            NextValue = scope:Value(UpgradeService:GetNextUpgradeEffect("IncreaseDeepThoughtChance")),
-
-            Cost = scope:Value(UpgradeService:GetNextCost("IncreaseDeepThoughtChance")),
-            Units = "Rebirths",
-
-            OnBuyOne = function()
-                UpgradeService:BuyUpgrade("IncreaseDeepThoughtChance")
-            end,
-            OnBuyMax = function()
-                UpgradeService:BuyMaxUpgrade("IncreaseDeepThoughtChance")
-            end
-        }
-    }
-
-    local function UpdateUpgradeBoards()
-        for _, board in upgradeBoards do
-            board.Level:set(UpgradeService:GetLevel(board.UpgradeId))
-            board.CurrentValue:set(UpgradeService:GetUpgradeEffect(board.UpgradeId))
-            board.NextValue:set(UpgradeService:GetNextUpgradeEffect(board.UpgradeId))
-            board.Cost:set(UpgradeService:GetNextCost(board.UpgradeId))
-        end
-    end
-
-    local function UpdateRebirthUpgradeBoards()
-        for _, board in rebirthUpgradeBoards do
-            board.Level:set(UpgradeService:GetLevel(board.UpgradeId))
-            board.CurrentValue:set(UpgradeService:GetUpgradeEffect(board.UpgradeId))
-            board.NextValue:set(UpgradeService:GetNextUpgradeEffect(board.UpgradeId))
-            board.Cost:set(UpgradeService:GetNextCost(board.UpgradeId))
-        end
-    end
-
 
     UpgradeService.UpgradeUpdated:Connect(function(upgradeId, newLevel)
         --print(`Upgrade {upgradeId} updated to level {newLevel}`)
@@ -178,80 +159,20 @@ return function(parent)
             rebirthBoard.Value:set(RebirthService:GetTotalRebirthsToGain())
         end
 
-        UpdateUpgradeBoards()
-        UpdateRebirthUpgradeBoards()
+        for _, board in allUpgradeBoards do
+            if board.UpgradeId ~= upgradeId then continue end
+            RefreshBoard(board)
+        end
+
     end)
 
-    RebirthService.RebirthsChanged:Connect(function(rebirths)
-        UpdateUpgradeBoards()
-        UpdateRebirthUpgradeBoards()
+    RebirthService.RebirthsChanged:Connect(function()
+        for _, board in allUpgradeBoards do
+            RefreshBoard(board)
+        end
     end)
 
-    local mounted = {}
-   
-    for _, board in upgradeBoards do
-        local surfaceGui = scope:New "SurfaceGui" {
-            Name = board.UpgradeId,
-            Adornee = board.Part,
-            Face = Enum.NormalId.Front,
-            Parent = parent,
-            
-            [Fusion.Children] = {
-                scope:UpgradeFrame {
-
-                    Level = board.Level,
-                    MaxLevel = board.MaxLevel,
-
-                    Description = board.Description,
-                    Icon = board.Icon,
-
-                    CurrentValue = board.CurrentValue,
-                    NextValue = board.NextValue,
-
-                    Cost = board.Cost,
-                    Units = board.Units,
-
-                    OnBuyOne = board.OnBuyOne,
-                    OnBuyMax = board.OnBuyMax,
-
-                }
-            }
-        }
-
-        table.insert(mounted, surfaceGui)
-    end
-
-    for _, board in rebirthUpgradeBoards do
-        local surfaceGui = scope:New "SurfaceGui" {
-            Name = board.UpgradeId,
-            Adornee = board.Part,
-            Face = Enum.NormalId.Front,
-            Parent = parent,
-            
-            [Fusion.Children] = {
-                scope:UpgradeFrame {
-
-                    Level = board.Level,
-                    MaxLevel = board.MaxLevel,
-
-                    Description = board.Description,
-                    Icon = board.Icon,
-
-                    CurrentValue = board.CurrentValue,
-                    NextValue = board.NextValue,
-
-                    Cost = board.Cost,
-                    Units = board.Units,
-
-                    OnBuyOne = board.OnBuyOne,
-                    OnBuyMax = board.OnBuyMax,
-                }
-            }
-        }
-
-        table.insert(mounted, surfaceGui)
-    end
-
+ 
      -- Mount rebirth board
     local rebirthSurfaceGui = scope:New "SurfaceGui" {
         Name = "RebirthBoard",

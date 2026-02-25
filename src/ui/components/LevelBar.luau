@@ -14,8 +14,8 @@ return function(scope, props)
     
     return scope:New "Frame" {
         Name = "LevelFrame",
-        Size = UDim2.new(0.4, 0, 0, 60), -- Width: 40% of screen, Height: 60px
-        Position = UDim2.new(0.5, 0, 1, -80), -- Bottom center, 80px from bottom
+        Size = UDim2.fromScale(0.4, 0.1), -- Width: 40% of screen, Height: 60px
+        Position = UDim2.fromScale(0.5, 0.87), -- Bottom center, 80px from bottom
         AnchorPoint = Vector2.new(0.5, 0),
         BackgroundTransparency = 1,
         
@@ -23,8 +23,8 @@ return function(scope, props)
             -- Level Label
             scope:New "TextLabel" {
                 Name = "LevelLabel",
-                Size = UDim2.new(1, 0, 0, 25),
-                Position = UDim2.new(0, 0, 0, 0),
+                Size = UDim2.fromScale(1, 0.45),
+                Position = UDim2.fromScale(0, 0),
                 BackgroundTransparency = 1,
                 
                 Text = scope:Computed(function(use)
@@ -45,8 +45,8 @@ return function(scope, props)
             -- XP Bar Container (background)
             scope:New "Frame" {
                 Name = "XPBarContainer",
-                Size = UDim2.new(1, 0, 0, 30),
-                Position = UDim2.new(0, 0, 0, 30),
+                Size = UDim2.fromScale(1, 0.55),
+                Position = UDim2.fromScale(0, 0.47),
                 BackgroundColor3 = Color3.fromRGB(0, 0, 0),
                 BackgroundTransparency = 0.5,
                 BorderSizePixel = 0,

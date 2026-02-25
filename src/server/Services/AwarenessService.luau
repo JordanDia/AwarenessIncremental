@@ -51,10 +51,11 @@ function AwarenessService:InitializePlayer(player, profile)
         while player.Parent do
             local increment = UpgradeService:GetUpgradeEffect(player, "AwarenessPerMeditation")
             local multiplier = UpgradeService:GetUpgradeEffect(player, "MultiplyAwarenessPerMeditation") or 1
+            local crystalMultiplier = UpgradeService:GetUpgradeEffect(player, "CrystalAwarenessMultiplier") or 1
             local interval = UpgradeService:GetUpgradeEffect(player, "MeditationSpeed")
 
             --print(`Incrementing awareness for {player.Name} by {increment} every {interval} seconds`)
-            local finalIncrement = math.round(increment * multiplier)
+            local finalIncrement = math.round(increment * multiplier * crystalMultiplier)
 
             -- "Deep Thought Chance"
             local deepThoughtChance = UpgradeService:GetUpgradeEffect(player, "IncreaseDeepThoughtChance")

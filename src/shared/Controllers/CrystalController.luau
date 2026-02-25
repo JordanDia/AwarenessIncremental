@@ -5,18 +5,16 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local CrystalController = Knit.CreateController { Name = "CrystalController" }
 
 local LocalPlayer = Players.LocalPlayer
-local MAX_CRYSTALS = 10
-local SPAWN_INTERVAL = 5
-local COLLECT_RADIUS = 5
 
 function CrystalController:KnitInit()
     self.crystals = {} -- active crystal parts
-    self.spawning = false
+    self.Spawning = false
 end
 
 function CrystalController:KnitStart()
     self.CrystalService = Knit.GetService("CrystalService")
     self.UnlockService = Knit.GetService("UnlockService")
+    self.UpgradeService = Knit.GetService("UpgradeService")
 
     self.CrystalService.StartCrystals:Connect(function()
         self:StartSpawning()
@@ -32,15 +30,20 @@ function CrystalController:KnitStart()
 end
 
 function CrystalController:StartSpawning()
-    if self.spawning then return end
-    self.spawning = true
+    if self.Spawning then return end
+    self.Spawning = true
 
     task.spawn(function()
-        while self.spawning do
-            if #self.crystals < MAX_CRYSTALS then
+        while self.Spawning do
+
+            local maxCrystals = self.UpgradeService:GetUpgradeEffect("MaxCrystals")
+
+            if #self.crystals < maxCrystals then
                 self:SpawnCrystal()
             end
-            task.wait(SPAWN_INTERVAL)
+
+            local spawnInterval = self.UpgradeService:GetUpgradeEffect("CrystalSpeed")
+            task.wait(spawnInterval or 3)
         end
     end)
 end
@@ -71,8 +74,13 @@ function CrystalController:SpawnCrystal()
     -- Collect on touch via PrimaryPart or any BasePart
     local touchPart = crystal.PrimaryPart or crystal:FindFirstChildWhichIsA("BasePart")
     if touchPart then
-        touchPart.Touched:Connect(function(hit)
+
+        local touchConnection = nil
+        touchConnection = touchPart.Touched:Connect(function(hit)
             if hit.Parent == LocalPlayer.Character then
+                touchConnection:Disconnect()
+                touchConnection = nil
+
                 self:CollectCrystal(crystal)
             end
         end)

@@ -5,6 +5,7 @@ local UnlockService = Knit.CreateService { Name = "UnlockService" }
 
 function UnlockService:KnitStart()
     self.DataService = Knit.GetService("DataService")
+    self.CrystalService = Knit.GetService("CrystalService")
 end
 
 function UnlockService:IsUnlocked(player, unlockId)
@@ -20,6 +21,12 @@ function UnlockService:Unlock(player, unlockId)
 
     profile.Data.Unlocks[unlockId] = true
     print(`Player {player.Name} unlocked: {unlockId}`)
+
+
+    if unlockId == "CrystalCollection" then
+        self.CrystalService:StartCrystals(player)
+    end
+
     return true
 end
 

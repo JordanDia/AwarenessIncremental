@@ -66,8 +66,9 @@ end
 function RebirthService:GetTotalRebirthsToGain(player)
     local baseRebirths = self:GetRebirthsToGain(player)
     local multiplier = self.UpgradeService:GetUpgradeEffect(player, "MultiplyRebirthAmount") or 1
+	local crystalMultiplier = self.UpgradeService:GetUpgradeEffect(player, "CrystalRebirthMultiplier") or 1
 
-    return baseRebirths * multiplier
+    return baseRebirths * multiplier * crystalMultiplier
 end
 -- Get the cost per rebirth
 function RebirthService:GetRebirthCost()
@@ -94,21 +95,17 @@ function RebirthService:PerformRebirth(player)
 		return false
 	end
 
-	local rebirthGainMultiplier = self.UpgradeService:GetUpgradeEffect(player, "MultiplyRebirthAmount") or 1
 	local rebirthsToGain = self:GetRebirthsToGain(player)
 	local multipliedRebirths = self:GetTotalRebirthsToGain(player)
-	local awarenessToSpend = rebirthsToGain * REBIRTH_COST
 
-	-- Deduct awareness
-	--self.AwarenessService:RemoveAwareness(player, awarenessToSpend)
+	-- Deduct reset awareness
 	self.AwarenessService:SetAwareness(player, 0)
 	-- Add rebirths
 	profile.Data.Rebirths = (profile.Data.Rebirths or 0) + multipliedRebirths
 
 	-- Reset upgrades (optional - you might want this)
-	for upgradeId, _ in pairs(profile.Data.Upgrades) do
-		profile.Data.Upgrades[upgradeId] = 1
-	end
+	profile.Data.Upgrades.AwarenessPerMeditation = 1
+	profile.Data.Upgrades.MeditationSpeed = 1
 
 	-- Fire events
 	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)

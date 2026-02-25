@@ -13,11 +13,13 @@ local UpgradeService = Knit.CreateService({
 UpgradeService.DataService = nil
 UpgradeService.AwarenessService = nil
 UpgradeService.RebirthService = nil
+UpgradeService.CrystalService = nil
 
 function UpgradeService:KnitStart()
 	self.DataService = Knit.GetService("DataService")
 	self.AwarenessService = Knit.GetService("AwarenessService")
 	self.RebirthService = Knit.GetService("RebirthService")
+	self.CrystalService = Knit.GetService("CrystalService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         if not profile then return end
@@ -78,6 +80,14 @@ function UpgradeService:BuyUpgrade(player, upgradeId)
 			self.RebirthService:RemoveRebirths(player, cost)
 			canAfford = true
 		end
+
+	elseif config.Currency == "Crystals" then
+		local crystals = self.CrystalService:GetCrystals(player)
+		if crystals >= cost then
+			-- Deduct rebirths (you'll need to add this method to RebirthService)
+			self.CrystalService:RemoveCrystals(player, cost)
+			canAfford = true
+		end
 	end
 
 	if not canAfford then
@@ -114,6 +124,8 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 		currentCurrency = self.AwarenessService:GetAwareness(player)
 	elseif config.Currency == "Rebirths" then
 		currentCurrency = self.RebirthService:GetRebirths(player)
+	elseif config.Currency == "Crystals" then
+		currentCurrency = self.CrystalService:GetCrystals(player)
 	end
 
 	-- Calculate how many levels we can buy
@@ -143,6 +155,8 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 			self.AwarenessService:RemoveAwareness(player, totalCost)
 		elseif config.Currency == "Rebirths" then
 			self.RebirthService:RemoveRebirths(player, totalCost)
+		elseif config.Currency == "Crystals" then
+			self.CrystalService:RemoveCrystals(player, totalCost)
 		end
 
 		-- Update level once

@@ -43,7 +43,7 @@ return function(
             -- Layout
             scope:New "UIListLayout" {
                 FillDirection = Enum.FillDirection.Vertical,
-                Padding = UDim.new(0.05, 0),
+                Padding = UDim.new(0.035, 0),
                 HorizontalAlignment = Enum.HorizontalAlignment.Center,
                 SortOrder = Enum.SortOrder.LayoutOrder,
             },
@@ -65,15 +65,22 @@ return function(
                     Enum.FontWeight.Bold
                 ),
                 TextColor3 = Color3.fromRGB(255, 255, 255),
+
+                [Fusion.Children] = {
+
+                    scope:New "UIStroke" {
+                        Thickness = 2,
+                    }
+
+                }
             },
 
             -- Icon
             scope:New "ImageLabel" {
                 Name = "Icon",
                 LayoutOrder = 2,
-                Size = UDim2.fromScale(1, 0.4),
+                Size = UDim2.fromScale(1, 0.3),
                 AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.fromScale(0.5, 0),
                 Image = props.Icon,
                 BackgroundTransparency = 1,
 
@@ -88,7 +95,7 @@ return function(
             scope:New "TextLabel" {
                 Name = "Description",
                 LayoutOrder = 3,
-                Size = UDim2.new(1, 0, 0, 40),
+                Size = UDim2.fromScale(0.8, 0.12),
                 BackgroundTransparency = 1,
 
                 TextWrapped = true,
@@ -96,16 +103,24 @@ return function(
                 TextScaled = true,
                 FontFace = Font.fromName(
                     "Montserrat",
-                    Enum.FontWeight.Regular
+                    Enum.FontWeight.Bold
                 ),
-                TextColor3 = Color3.fromRGB(200, 200, 200),
+                TextColor3 = Color3.fromRGB(255, 255, 255),
+
+                [Fusion.Children] = {
+
+                    scope:New "UIStroke" {
+                        Thickness = 2,
+                    }
+
+                }
             },
 
             -- Upgrade Values
             scope:New "TextLabel" {
                 Name = "UpgradeValues",
                 LayoutOrder = 4,
-                Size = UDim2.new(1, 0, 0, 25),
+                Size = UDim2.fromScale(0.8, 0.08),
                 BackgroundTransparency = 1,
 
                 Text = scope:Computed(function(use)
@@ -121,85 +136,183 @@ return function(
                     end
 
                     return `+{ currentValue } > +{ nextValue }`
+
                 end),
 
                 TextScaled = true,
                 FontFace = Font.fromName(
                     "Montserrat",
-                    Enum.FontWeight.SemiBold
+                    Enum.FontWeight.Bold
                 ),
                 TextColor3 = Color3.fromRGB(255, 215, 0),
+
+                [Fusion.Children] = {
+
+                    scope:New "UIStroke" {
+                        Thickness = 2,
+                    }
+
+                }
             },
 
             -- Cost Text
             scope:New "TextLabel" {
                 LayoutOrder = 5,
-                Size = UDim2.new(1, 0, 0, 25),
+                Size = UDim2.fromScale(1, 0.05),
                 BackgroundTransparency = 1,
 
                 Text = scope:Computed(function(use)
                     local cost = props.Cost and use(props.Cost) or 0
-                    return `Cost: {FormatNumber(cost, ".##")} {props.Units or ""}`
+                    return `Cost: <font color="rgb(150, 255, 150)">{FormatNumber(cost, ".##")} {props.Units or ""}</font>`
                 end),
 
+                RichText = true,
                 TextScaled = true,
                 FontFace = Font.fromName(
                     "Montserrat",
-                    Enum.FontWeight.Medium
+                    Enum.FontWeight.Bold
                 ),
-                TextColor3 = Color3.fromRGB(150, 255, 150),
+                TextColor3 = Color3.fromRGB(255, 255, 255), -- White for "Cost:"
+
+                [Fusion.Children] = {
+
+                    scope:New "UIStroke" {
+                        Thickness = 1,
+                    }
+
+                }
             },
 
             -- Buttons Container
             scope:New "Frame" {
                 LayoutOrder = 6,
-                Size = UDim2.new(1, 0, 0, 40),
+                Size = UDim2.fromScale(1, 0.15),
                 BackgroundTransparency = 1,
 
                 [Fusion.Children] = {
                     scope:New "UIListLayout" {
                         FillDirection = Enum.FillDirection.Horizontal,
-                        Padding = UDim.new(0, 8),
+                        Padding = UDim.new(0.066, 0),
+                        HorizontalAlignment = Enum.HorizontalAlignment.Center,
                     },
 
                     -- Buy One
                     scope:New "TextButton" {
-                        Size = UDim2.fromScale(0.5, 1),
-                        Text = "Buy 1",
-                        TextScaled = true,
-                        BackgroundColor3 = Color3.fromRGB(70, 140, 255),
+                        Size = UDim2.fromScale(0.4, 1),
+                        Text = "",
+                        BackgroundColor3 = Color3.fromRGB(80, 200, 120),
                         TextColor3 = Color3.new(1, 1, 1),
+                        BorderSizePixel = 0,
 
                         FontFace = Font.fromName(
                             "Montserrat",
                             Enum.FontWeight.Bold
                         ),
+                        
+                        TextStrokeTransparency = 0,
+                        TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
 
                         [Fusion.OnEvent "Activated"] = function()
                             if props.OnBuyOne then
                                 props.OnBuyOne()
                             end
                         end,
+                        
+                        [Fusion.Children] = {
+                            scope:New "UICorner" {
+                                CornerRadius = UDim.new(0.1, 0), -- Fully round
+                            },
+                            
+                            scope:New "UIStroke" {
+                                Thickness = 4,
+                                Color = Color3.fromRGB(0, 0, 0),
+                                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                            },
+
+                            scope:New "TextLabel" {
+
+                                AnchorPoint = Vector2.new(0.5, 0.5),
+                                Position = UDim2.fromScale(0.5, 0.5),
+                                Size = UDim2.fromScale(0.9, 0.5),
+                                FontFace = Font.fromName("Montserrat", Enum.FontWeight.Bold),
+                                BackgroundTransparency = 1,
+                                ZIndex = 10,
+
+                                Text = "Buy 1",
+                                TextScaled = true,
+                                BackgroundColor3 = Color3.fromRGB(70, 140, 255),
+                                TextColor3 = Color3.new(1, 1, 1),
+
+
+                                [Fusion.Children] = {
+
+                                    scope:New "UIStroke" {
+                                        Thickness = 3,
+                                    }
+
+                                }
+
+                            }
+                        }
                     },
 
                     -- Buy Max
                     scope:New "TextButton" {
-                        Size = UDim2.fromScale(0.5, 1),
-                        Text = "Buy Max",
-                        TextScaled = true,
-                        BackgroundColor3 = Color3.fromRGB(80, 200, 120),
+                        Size = UDim2.fromScale(0.4, 1),
+                        Text = "",
+                        BackgroundColor3 = Color3.fromRGB(70, 140, 255),
                         TextColor3 = Color3.new(1, 1, 1),
+                        BorderSizePixel = 0,
 
                         FontFace = Font.fromName(
                             "Montserrat",
                             Enum.FontWeight.Bold
                         ),
+                        
+                        TextStrokeTransparency = 0,
+                        TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
 
                         [Fusion.OnEvent "Activated"] = function()
                             if props.OnBuyMax then
                                 props.OnBuyMax()
                             end
                         end,
+                        
+                        [Fusion.Children] = {
+                            scope:New "UICorner" {
+                                CornerRadius = UDim.new(0.1, 0)
+                            },
+                            
+                            scope:New "UIStroke" {
+                                Thickness = 4,
+                                Color = Color3.fromRGB(0, 0, 0),
+                                ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                            },
+
+                            scope:New "TextLabel" {
+
+                                AnchorPoint = Vector2.new(0.5, 0.5),
+                                Position = UDim2.fromScale(0.5, 0.5),
+                                Size = UDim2.fromScale(0.9, 0.5),
+                                FontFace = Font.fromName("Montserrat", Enum.FontWeight.Bold),
+                                BackgroundTransparency = 1,
+                                ZIndex = 10,
+
+                                Text = "Buy Max",
+                                TextScaled = true,
+                                BackgroundColor3 = Color3.fromRGB(70, 140, 255),
+                                TextColor3 = Color3.new(1, 1, 1),
+
+                                [Fusion.Children] = {
+                                    
+                                    scope:New "UIStroke" {
+                                        Thickness = 3,
+                                    }
+
+                                }
+
+                            }
+                        }
                     },
                 }
             }

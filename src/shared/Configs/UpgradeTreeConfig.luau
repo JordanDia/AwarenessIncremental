@@ -4,13 +4,13 @@ return {
         {
             NodeId = "RootNode",
             Unlocks = {"NodeA"},
-            UnlockLinks = {1},
+            UnlockLinks = {},
             Rewards = {"Crystals"},
 
             Title = "Upgrade: 1-1",
             UpgradeName = "Unlock Crystal Collection",
             Cost = {
-                Amount = 5,
+                Amount = 0,
                 Currency = "Awareness",
             }
             
@@ -20,7 +20,7 @@ return {
         {
             NodeId = "NodeA",
             Unlocks = {"NodeB"},
-            UnlockLinks = {2},
+            UnlockLinks = {1},
             Rewards = {"2x Awareness"},
 
             Title = "Upgrade: 1-2",
@@ -34,7 +34,7 @@ return {
         {
             NodeId = "NodeB",
             Unlocks = {"NodeC"},
-            UnlockLinks = {3},
+            UnlockLinks = {2},
             Rewards = {"2x Rebirths"},
 
             Title = "Upgrade: 1-3",
@@ -48,7 +48,7 @@ return {
         {
             NodeId = "NodeC",
             Unlocks = {},
-            UnlockLinks = {},
+            UnlockLinks = {3},
             Rewards = {"2x Crystals"},
 
             Title = "Upgrade: 1-4",

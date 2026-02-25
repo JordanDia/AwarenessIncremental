@@ -34,7 +34,7 @@ return function(
             -- Layout
             scope:New "UIListLayout" {
                 FillDirection = Enum.FillDirection.Vertical,
-                Padding = UDim.new(0.05, 0),
+                Padding = UDim.new(0.035, 0),
                 HorizontalAlignment = Enum.HorizontalAlignment.Center,
                 SortOrder = Enum.SortOrder.LayoutOrder,
             },
@@ -53,15 +53,20 @@ return function(
                     Enum.FontWeight.Bold
                 ),
                 TextColor3 = Color3.fromRGB(255, 255, 255),
+
+                [Fusion.Children] = {
+                    scope:New "UIStroke" {
+                        Thickness = 2,
+                    }
+                }
             },
 
             -- Icon
             scope:New "ImageLabel" {
                 Name = "Icon",
                 LayoutOrder = 2,
-                Size = UDim2.fromScale(1, 0.4),
+                Size = UDim2.fromScale(1, 0.3),
                 AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.fromScale(0.5, 0),
                 Image = props.Icon,
                 BackgroundTransparency = 1,
 
@@ -71,64 +76,116 @@ return function(
                     }
                 }
             },
+        
+            -- Spacer (matches Description size in UpgradeFrame)
+            scope:New "Frame" {
+                Name = "Spacer",
+                LayoutOrder = 3,
+                Size = UDim2.fromScale(0.8, 0.12),
+                BackgroundTransparency = 1,
+            },
 
             -- Rebirth Value
             scope:New "TextLabel" {
                 Name = "RebirthValue",
                 LayoutOrder = 3,
-                Size = UDim2.new(1, 0, 0, 25),
+                Size = UDim2.fromScale(0.8, 0.08),
                 BackgroundTransparency = 1,
 
                 Text = scope:Computed(function(use)
-
                     local value = props.Value and use(props.Value)
-
                     return `+{ FormatNumber(value) }`
                 end),
 
                 TextScaled = true,
                 FontFace = Font.fromName(
                     "Montserrat",
-                    Enum.FontWeight.SemiBold
+                    Enum.FontWeight.Bold
                 ),
                 TextColor3 = Color3.fromRGB(162, 0, 255),
+
+                [Fusion.Children] = {
+                    scope:New "UIStroke" {
+                        Thickness = 2,
+                    }
+                }
             },
 
             -- Cost Text
             scope:New "TextLabel" {
                 LayoutOrder = 4,
-                Size = UDim2.new(1, 0, 0, 25),
+                Size = UDim2.fromScale(1, 0.05),
                 BackgroundTransparency = 1,
 
                 Text = "Cost: 1K Awareness",
-
+                RichText = true,
                 TextScaled = true,
                 FontFace = Font.fromName(
                     "Montserrat",
-                    Enum.FontWeight.Medium
+                    Enum.FontWeight.Bold
                 ),
-                TextColor3 = Color3.fromRGB(150, 255, 150),
+                TextColor3 = Color3.fromRGB(255, 255, 255),
+
+                [Fusion.Children] = {
+                    scope:New "UIStroke" {
+                        Thickness = 1,
+                    }
+                }
             },
 
-            -- Rebirth button
+            -- Rebirth Button
             scope:New "TextButton" {
                 LayoutOrder = 5,
-                Size = UDim2.fromScale(0.5, 0.15),
-                Text = "Rebirth",
-                TextScaled = true,
-                BackgroundColor3 = Color3.fromRGB(70, 140, 255),
+                Size = UDim2.fromScale(0.4, 0.15),
+                Text = "",
+                BackgroundColor3 = Color3.fromRGB(80, 200, 120),
                 TextColor3 = Color3.new(1, 1, 1),
+                BorderSizePixel = 0,
 
                 FontFace = Font.fromName(
                     "Montserrat",
                     Enum.FontWeight.Bold
                 ),
 
+                TextStrokeTransparency = 0,
+                TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+
                 [Fusion.OnEvent "Activated"] = function()
                     if props.OnRebirth then
                         props.OnRebirth()
                     end
                 end,
+
+                [Fusion.Children] = {
+                    scope:New "UICorner" {
+                        CornerRadius = UDim.new(0.1, 0),
+                    },
+
+                    scope:New "UIStroke" {
+                        Thickness = 4,
+                        Color = Color3.fromRGB(0, 0, 0),
+                        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                    },
+
+                    scope:New "TextLabel" {
+                        AnchorPoint = Vector2.new(0.5, 0.5),
+                        Position = UDim2.fromScale(0.5, 0.5),
+                        Size = UDim2.fromScale(0.9, 0.5),
+                        FontFace = Font.fromName("Montserrat", Enum.FontWeight.Bold),
+                        BackgroundTransparency = 1,
+                        ZIndex = 10,
+
+                        Text = "Rebirth",
+                        TextScaled = true,
+                        TextColor3 = Color3.new(1, 1, 1),
+
+                        [Fusion.Children] = {
+                            scope:New "UIStroke" {
+                                Thickness = 3,
+                            }
+                        }
+                    }
+                }
             },
         }
     }

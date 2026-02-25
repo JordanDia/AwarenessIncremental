@@ -8,6 +8,9 @@ local ProfileStore = require(ServerScriptService.ServerPackages.ProfileStore)
 
 local DataService = Knit.CreateService{
 	Name = "DataService",
+	Client = {
+		DataLoaded = Knit.CreateSignal()
+	}
 }
 
 DataService.Profiles = {}
@@ -22,8 +25,18 @@ local PROFILE_TEMPLATE = {
 	Level = 1,
 
 	Upgrades = {
+
+		-- Meditation
 		AwarenessPerMeditation = 1,
 		MeditationSpeed = 1,
+
+		-- Crystals
+		CrystalValue = 1,
+		CrystalSpeed = 1,
+		MaxCrystals = 1,
+		CrystalMultiplier = 1,
+		CrystalAwarenessMultiplier = 1,
+		CrystalRebirthMultiplier = 1,
 	},
 
 	RebirthUpgrades = {
@@ -41,7 +54,6 @@ local PROFILE_TEMPLATE = {
     },
 
 	PurchasedNodes = {
-
 
 		Tree1 = {},
 	},
@@ -63,6 +75,10 @@ function DataService:KnitInit()
 
 	Players.PlayerRemoving:Connect(function(player: Player)
 		DataService:PlayerRemoving(player)
+	end)
+
+	self.ProfileLoaded:Connect(function(player, profile)
+		self.Client.DataLoaded:Fire(player, profile.Data)
 	end)
 end
 
@@ -86,6 +102,7 @@ function DataService:LoadPlayer(player: Player)
 			DataService.Profiles[player] = profile
 			DataService.ProfileLoaded:Fire(player, profile)
 
+			print(profile)
 			print(`Profile loaded for player {player.Name} ({player.UserId})`)
 		else
 			-- The player has left before the profile session started
@@ -100,7 +117,8 @@ end
 function DataService:PlayerRemoving(player: Player)
 	local profile = DataService.Profiles[player]
 	if profile ~= nil then
-		--profile.Data = {}
+		print(profile)
+		profile.Data = {}
 		profile:EndSession()
 	end
 end
