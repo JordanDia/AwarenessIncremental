@@ -12,6 +12,8 @@ local ButtonFrame = require("../components/ButtonFrame")
 local ButtonHolder = require("../components/ButtonHolder")
 local AbilityButton = require("../components/AbilityButton")
 local AbilityButtonHolder = require("../components/AbilityButtonHolder")
+local ProfileFrame = require("../components/ProfileFrame")
+local ShopFrame = require("../components/ShopFrame")
 
 return function(parent)
     local scope = scoped(Fusion, {
@@ -22,23 +24,49 @@ return function(parent)
         ButtonHolder = ButtonHolder,
         AbilityButton = AbilityButton,
         AbilityButtonHolder = AbilityButtonHolder,
+        ProfileFrame = ProfileFrame,
+        ShopFrame = ShopFrame,
     })
+
+    local isProfileOpen = false
+    local isProfileVisible = scope:Value(false)
+
+    local isShopOpen = false
+    local isShopVisible = scope:Value(false)
     
     local DataService = Knit.GetService("DataService")
     local AwarenessService = Knit.GetService("AwarenessService")
     local RebirthService = Knit.GetService("RebirthService")
     local CrystalService = Knit.GetService("CrystalService")
+    local AstralEchoService = Knit.GetService("AstralEchoService")
+    local HarmonyService = Knit.GetService("HarmonyService")
     local LevelService = Knit.GetService("LevelService")
+    local GamepassService = Knit.GetService("GamepassService")
 
     local awarenessValue = scope:Value(AwarenessService:GetAwareness())
     local rebirthValue = scope:Value(RebirthService:GetRebirths())
     local crystalValue = scope:Value(CrystalService:GetCrystals())
+    local echoValue = scope:Value(AstralEchoService:GetEchoes())
+    local harmonyValue = scope:Value(HarmonyService:GetHarmony())
 
-    
+    -- Lifetime totals for the profile panel
+    local awarnessTotalValue = scope:Value(0)
+    local rebirthsTotalValue = scope:Value(0)
+    local crystalsTotalValue = scope:Value(0)
+    local echoesTotalValue = scope:Value(0)
+    local harmonyTotalValue = scope:Value(0)
+
     DataService.DataLoaded:Connect(function(data)
         awarenessValue:set(data.Awareness)
         rebirthValue:set(data.Rebirths)
         crystalValue:set(data.Crystals)
+        echoValue:set(data.AstralEchoes or 0)
+        harmonyValue:set(data.Harmony or 0)
+        awarnessTotalValue:set(data.AwarenessTotal or 0)
+        rebirthsTotalValue:set(data.RebirthsTotal or 0)
+        crystalsTotalValue:set(data.CrystalsTotal or 0)
+        echoesTotalValue:set(data.AstralEchoesTotal or 0)
+        harmonyTotalValue:set(data.HarmonyTotal or 0)
     end)
 
     AwarenessService.AwarenessChanged:Connect(function(newAwareness)
@@ -46,13 +74,41 @@ return function(parent)
         awarenessValue:set(newAwareness)
     end)
 
+    AwarenessService.AwarenessTotalChanged:Connect(function(total)
+        awarnessTotalValue:set(total)
+    end)
+
     RebirthService.RebirthsChanged:Connect(function(newRebirths)
         --print("Rebirths updated to", newRebirths)
         rebirthValue:set(newRebirths)
     end)
 
+    RebirthService.RebirthsTotalChanged:Connect(function(total)
+        rebirthsTotalValue:set(total)
+    end)
+
     CrystalService.CrystalsChanged:Connect(function(crystals)
         crystalValue:set(crystals)
+    end)
+
+    CrystalService.CrystalsTotalChanged:Connect(function(total)
+        crystalsTotalValue:set(total)
+    end)
+
+    AstralEchoService.EchoesChanged:Connect(function(echoes)
+        echoValue:set(echoes)
+    end)
+
+    AstralEchoService.EchoesTotalChanged:Connect(function(total)
+        echoesTotalValue:set(total)
+    end)
+
+    HarmonyService.HarmonyChanged:Connect(function(harmony)
+        harmonyValue:set(harmony)
+    end)
+
+    HarmonyService.HarmonyTotalChanged:Connect(function(total)
+        harmonyTotalValue:set(total)
     end)
 
     -- Level System
@@ -113,7 +169,25 @@ return function(parent)
             LayoutOrder = 80,
             Visible = scope:Value(true),
         },
-        
+
+        {
+            Name = "AstralEchoFrame",
+            Value = echoValue,
+            Icon = "rbxassetid://118132965740444",
+            TextColor3 = Color3.fromRGB(0, 210, 200),
+            LayoutOrder = 70,
+            Visible = scope:Value(true),
+        },
+
+        {
+            Name = "HarmonyFrame",
+            Value = harmonyValue,
+            Icon = "rbxassetid://70601939887941", -- TODO: replace with a Harmony icon
+            TextColor3 = Color3.fromRGB(55, 210, 95),
+            LayoutOrder = 60,
+            Visible = scope:Value(true),
+        },
+
     }
 
     local buttons = scope:Value {
@@ -123,7 +197,10 @@ return function(parent)
             Icon = "rbxassetid://103530311715340",
             LayoutOrder = 1,
             Visible = true,
-            OnActivated = function() print("Shop opened") end,
+            OnActivated = function()
+                isShopOpen = not isShopOpen
+                isShopVisible:set(isShopOpen)
+            end,
         },
         {
             Name = "Inventory",
@@ -146,7 +223,10 @@ return function(parent)
             Icon = "rbxassetid://126097416319421",
             LayoutOrder = 4,
             Visible = true,
-            OnActivated = function() print("Profile opened") end,
+            OnActivated = function()
+                isProfileOpen = not isProfileOpen
+                isProfileVisible:set(isProfileOpen)
+            end,
         },
 
     }
@@ -206,7 +286,31 @@ return function(parent)
 
             scope:AbilityButtonHolder {
                 Buttons = abilityButtons
-            }
+            },
+
+            scope:ShopFrame {
+                Visible = isShopVisible,
+                GamepassService = GamepassService,
+                OnClose = function()
+                    isShopOpen = false
+                    isShopVisible:set(false)
+                end,
+            },
+
+            scope:ProfileFrame {
+                Visible = isProfileVisible,
+                OnClose = function()
+                    isProfileOpen = false
+                    isProfileVisible:set(false)
+                end,
+                Level = levelValue,
+                AwarenessTotal = awarnessTotalValue,
+                Rebirths = rebirthValue,
+                RebirthsTotal = rebirthsTotalValue,
+                CrystalsTotal = crystalsTotalValue,
+                AstralEchoesTotal = echoesTotalValue,
+                HarmonyTotal = harmonyTotalValue,
+            },
 
         }
 

@@ -1,22 +1,29 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundService = game:GetService("SoundService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local scoped = Fusion.scoped
 
-local UpgradeFrame = require("../components/UpgradeFrame")
-local RebirthFrame = require("../components/RebirthFrame")
+local UpgradeSound: Sound = SoundService:WaitForChild("Upgrade")
+
+local UpgradeFrame    = require("../components/UpgradeFrame")
+local RebirthFrame    = require("../components/RebirthFrame")
+local AwakeningFrame  = require("../components/AwakeningFrame")
 
 return function(parent)
 
     local scope = scoped(Fusion, {
-        UpgradeFrame = UpgradeFrame,
-        RebirthFrame = RebirthFrame
+        UpgradeFrame   = UpgradeFrame,
+        RebirthFrame   = RebirthFrame,
+        AwakeningFrame = AwakeningFrame,
     })
 
-    local RebirthService = Knit.GetService("RebirthService")
-    local UpgradeService = Knit.GetService("UpgradeService")
+    local RebirthService   = Knit.GetService("RebirthService")
+    local UpgradeService   = Knit.GetService("UpgradeService")
+    local AwakeningService = Knit.GetService("AwakeningService")
+    local AwarenessService = Knit.GetService("AwarenessService")
 
     local function MakeUpgradeBoard(upgradeId, part, description, icon, units)
         return {
@@ -32,9 +39,11 @@ return function(parent)
             Cost = scope:Value(UpgradeService:GetNextCost(upgradeId)),
             OnBuyOne = function()
                 UpgradeService:BuyUpgrade(upgradeId)
+                UpgradeSound:Play()
             end,
             OnBuyMax = function()
                 UpgradeService:BuyMaxUpgrade(upgradeId)
+                UpgradeSound:Play()
             end,
         }
     end
@@ -193,6 +202,35 @@ return function(parent)
     RebirthService.RebirthsToGainUpdated:Connect(function(newRebirthsToGain)
         rebirthBoard.Value:set(RebirthService:GetTotalRebirthsToGain())
     end)
+
+    -- ── Awakening board ───────────────────────────────────────────────────
+    local awakeningLevel = scope:Value(AwakeningService:GetLevel())
+    local awarenessValue = scope:Value(AwarenessService:GetAwareness())
+
+    AwakeningService.AwakeningLevelChanged:Connect(function(level)
+        awakeningLevel:set(level)
+    end)
+
+    AwarenessService.AwarenessChanged:Connect(function(awareness)
+        awarenessValue:set(awareness)
+    end)
+
+    scope:New "SurfaceGui" {
+        Name    = "AwakeningBoard",
+        Adornee = workspace.UpgradeBoards:WaitForChild("AwakeningBoard"),
+        Face    = Enum.NormalId.Front,
+        Parent  = parent,
+
+        [Fusion.Children] = {
+            scope:AwakeningFrame {
+                AwakeningLevel = awakeningLevel,
+                Awareness      = awarenessValue,
+                OnAwaken       = function()
+                    AwakeningService:Awaken()
+                end,
+            }
+        }
+    }
 
     return function()
         scope:doCleanup()

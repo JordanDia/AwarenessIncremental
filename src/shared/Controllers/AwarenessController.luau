@@ -88,6 +88,16 @@ function AwarenessController:ShowFloatingText(delta: number, isDeepThought: bool
             TextStrokeTransparency = 1      -- Fade stroke too
         })
 
+
+        local uiStroke: UIStroke = textLabel:FindFirstChild("UIStroke")
+        if uiStroke then
+            local strokeTween = TweenService:Create(uiStroke, tweenInfo, {
+                Transparency = 1
+            })
+            
+            strokeTween:Play()
+        end
+
         positionTween:Play()
         transparencyTween:Play()
     end

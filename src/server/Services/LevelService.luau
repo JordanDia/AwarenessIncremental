@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local DataService = require("./DataService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local LevelService = Knit.CreateService {
     Name = "LevelService",
@@ -11,12 +12,13 @@ local LevelService = Knit.CreateService {
 }
 
 LevelService.DataService = nil
+LevelService.LevelChanged = Signal.new() -- (player, newLevel, oldLevel)
 
 -- Level configuration
 local LevelConfig = {
-    BaseXP = 100,           -- XP needed for level 2
-    ScalingFactor = 1.8,   -- Each level requires 15% more XP (adjust as needed)
-    MaxLevel = nil,         -- nil for unlimited, or set a number
+    BaseXP = 100,           
+    ScalingFactor = 1.8,
+    MaxLevel = nil,
 }
 
 function LevelService:KnitStart()
@@ -35,18 +37,13 @@ end
 
 -- Initialize player level data
 function LevelService:SetupPlayer(player, profile)
-    -- Validate that level matches XP (in case of formula changes)
     local calculatedLevel = self:GetLevelFromXP(profile.Data.XP)
     
     if profile.Data.Level ~= calculatedLevel then
-        warn(`Level mismatch for {player.Name}! Stored: {profile.Data.Level}, Calculated: {calculatedLevel}`)
         profile.Data.Level = calculatedLevel
     end
-    
-    print(`Initialized level for {player.Name}: Level {profile.Data.Level}, XP {profile.Data.XP}`)
 end
 
--- Calculate XP required for a specific level
 function LevelService:GetXPForLevel(level)
     if level < 1 then return 0 end
     
@@ -144,6 +141,7 @@ function LevelService:AddXP(player, amount)
         -- Fire level up event for each level gained
         for level = oldLevel + 1, newLevel do
             self.Client.LevelChanged:Fire(player, level, level - 1)
+            self.LevelChanged:Fire(player, level, level - 1)
             print(`Player {player.Name} leveled up! Level {level - 1} -> {level}`)
         end
     end
@@ -166,6 +164,7 @@ function LevelService:SetXP(player, amount)
     
     if newLevel ~= oldLevel then
         self.Client.LevelChanged:Fire(player, newLevel, oldLevel)
+        self.LevelChanged:Fire(player, newLevel, oldLevel)
     end
     
     self.Client.XPChanged:Fire(player, profile.Data.XP)

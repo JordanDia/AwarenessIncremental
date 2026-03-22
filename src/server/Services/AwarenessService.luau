@@ -2,7 +2,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local UpgradeService = require("./UpgradeService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -10,13 +9,15 @@ local AwarenessService = Knit.CreateService {
     Name = "AwarenessService",
     Client = {
         AwarenessChanged = Knit.CreateSignal(),
+        AwarenessTotalChanged = Knit.CreateSignal(),
         DeepThoughtEffect = Knit.CreateSignal()
-    } -- Knit client functions
+    }
 }
 
 AwarenessService.DataService = nil
 AwarenessService.UpgradeService = nil
 AwarenessService.LevelService = nil
+AwarenessService.MultiplierService = nil
 
 AwarenessService.AwarenessChanged = Signal.new() -- Fires (player, newAwareness)
 
@@ -24,6 +25,7 @@ function AwarenessService:KnitStart()
     self.DataService = Knit.GetService("DataService")
     self.UpgradeService = Knit.GetService("UpgradeService")
     self.LevelService = Knit.GetService("LevelService")
+    self.MultiplierService = Knit.GetService("MultiplierService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         if not profile then return end
@@ -41,7 +43,6 @@ function AwarenessService:KnitStart()
    
 end
 
--- Initialize a player's Awareness data
 function AwarenessService:InitializePlayer(player, profile)
     --print(`Awareness for player {player.Name} is {profile.Data.Awareness}`)
 
@@ -49,16 +50,15 @@ function AwarenessService:InitializePlayer(player, profile)
 
     task.spawn(function()
         while player.Parent do
-            local increment = UpgradeService:GetUpgradeEffect(player, "AwarenessPerMeditation")
-            local multiplier = UpgradeService:GetUpgradeEffect(player, "MultiplyAwarenessPerMeditation") or 1
-            local crystalMultiplier = UpgradeService:GetUpgradeEffect(player, "CrystalAwarenessMultiplier") or 1
-            local interval = UpgradeService:GetUpgradeEffect(player, "MeditationSpeed")
+            local increment = self.UpgradeService:GetUpgradeEffect(player, "AwarenessPerMeditation")
+            local multiplier = self.MultiplierService:GetMultiplier(player, "Awareness")
+            local interval = self.UpgradeService:GetUpgradeEffect(player, "MeditationSpeed")
 
             --print(`Incrementing awareness for {player.Name} by {increment} every {interval} seconds`)
-            local finalIncrement = math.round(increment * multiplier * crystalMultiplier)
+            local finalIncrement = math.round(increment * multiplier)
 
             -- "Deep Thought Chance"
-            local deepThoughtChance = UpgradeService:GetUpgradeEffect(player, "IncreaseDeepThoughtChance")
+            local deepThoughtChance = self.UpgradeService:GetUpgradeEffect(player, "IncreaseDeepThoughtChance")
             local randomNumber = randomGenerator:NextInteger(1, 100)
             local isDeepThought = false
 
@@ -87,7 +87,9 @@ function AwarenessService:AddAwareness(player: Player, amount: number, isDeepTho
     local profile = self.DataService:GetProfile(player)
     if not profile then return 0 end
     profile.Data.Awareness += amount
+    profile.Data.AwarenessTotal = (profile.Data.AwarenessTotal or 0) + amount
     self.AwarenessChanged:Fire(player, profile.Data.Awareness, isDeepThought)
+    self.Client.AwarenessTotalChanged:Fire(player, profile.Data.AwarenessTotal)
     return profile.Data.Awareness
 end
 

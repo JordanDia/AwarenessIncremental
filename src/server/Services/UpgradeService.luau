@@ -3,6 +3,14 @@ local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local UpgradeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeConfig)
 
+-- Upgrades that feed into MultiplierService. Maps upgradeId -> { stat, source }
+local MULTIPLIER_MAP = {
+	MultiplyAwarenessPerMeditation = { stat = "Awareness", source = "Rebirth" },
+	CrystalAwarenessMultiplier     = { stat = "Awareness", source = "Crystal" },
+	MultiplyRebirthAmount          = { stat = "Rebirth",   source = "Rebirth" },
+	CrystalRebirthMultiplier       = { stat = "Rebirth",   source = "Crystal" },
+}
+
 local UpgradeService = Knit.CreateService({
 	Name = "UpgradeService",
 	Client = {
@@ -14,12 +22,14 @@ UpgradeService.DataService = nil
 UpgradeService.AwarenessService = nil
 UpgradeService.RebirthService = nil
 UpgradeService.CrystalService = nil
+UpgradeService.MultiplierService = nil
 
 function UpgradeService:KnitStart()
 	self.DataService = Knit.GetService("DataService")
 	self.AwarenessService = Knit.GetService("AwarenessService")
 	self.RebirthService = Knit.GetService("RebirthService")
 	self.CrystalService = Knit.GetService("CrystalService")
+	self.MultiplierService = Knit.GetService("MultiplierService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         if not profile then return end
@@ -31,6 +41,19 @@ function UpgradeService:KnitStart()
     end
 end
 
+-- If upgradeId feeds a multiplier stat, push the current value to MultiplierService
+function UpgradeService:_UpdateMultiplierIfNeeded(player, upgradeId, level)
+	local mapping = MULTIPLIER_MAP[upgradeId]
+	if not mapping then return end
+
+	if level <= 0 then
+		self.MultiplierService:RemoveSource(player, mapping.stat, mapping.source)
+	else
+		local value = UpgradeConfig[upgradeId].EffectPerLevel(level)
+		self.MultiplierService:SetSource(player, mapping.stat, mapping.source, value)
+	end
+end
+
 -- Initialize the player’s upgrade data
 function UpgradeService:SetupPlayer(player, profile)
 	local upgrades = profile.Data.Upgrades
@@ -38,6 +61,16 @@ function UpgradeService:SetupPlayer(player, profile)
 	-- Send current upgrade levels to client
 	for upgradeId, level in upgrades do
 		self.Client.UpgradeUpdated:Fire(player, upgradeId, level)
+	end
+
+	-- Seed MultiplierService from saved upgrade levels
+	for upgradeId in MULTIPLIER_MAP do
+		local config = UpgradeConfig[upgradeId]
+		if config then
+			local upgradeTable = self:_GetUpgradeDataTable(profile, config.Category)
+			local level = (upgradeTable and upgradeTable[upgradeId]) or 0
+			self:_UpdateMultiplierIfNeeded(player, upgradeId, level)
+		end
 	end
 end
 
@@ -98,6 +131,8 @@ function UpgradeService:BuyUpgrade(player, upgradeId)
 	-- Increment level
 	upgradeTable[upgradeId] = currentLevel + 1
     --print("Current level of", upgradeId, "is", upgradeTable[upgradeId])
+
+	self:_UpdateMultiplierIfNeeded(player, upgradeId, upgradeTable[upgradeId])
 
 	-- Fire events
 	self.Client.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
@@ -161,7 +196,9 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 
 		-- Update level once
 		upgradeTable[upgradeId] = currentLevel + levelsToBuy
-		
+
+		self:_UpdateMultiplierIfNeeded(player, upgradeId, upgradeTable[upgradeId])
+
 		-- Fire event once with final level
 		self.Client.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
 		
@@ -240,6 +277,25 @@ function UpgradeService:GetMaxLevel(upgradeId)
     local config = UpgradeConfig[upgradeId]
     if not config then return 0 end
     return config.MaxLevel or math.huge
+end
+
+-- Buy one level of an upgrade for free (no currency deducted). Used by Awakening Level 5 auto-buy.
+function UpgradeService:AutoBuyUpgradeFree(player, upgradeId)
+    local profile = self.DataService:GetProfile(player)
+    if not profile then return end
+
+    local config = UpgradeConfig[upgradeId]
+    if not config then return end
+
+    local upgradeTable = self:_GetUpgradeDataTable(profile, config.Category)
+    if not upgradeTable then return end
+
+    local currentLevel = upgradeTable[upgradeId] or 0
+    if config.MaxLevel and currentLevel >= config.MaxLevel then return end
+
+    upgradeTable[upgradeId] = currentLevel + 1
+    self:_UpdateMultiplierIfNeeded(player, upgradeId, upgradeTable[upgradeId])
+    self.Client.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
 end
 
 -- Helper to get the upgrade data table based on category

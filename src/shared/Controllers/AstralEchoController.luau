@@ -32,8 +32,6 @@ local function randomDriftTarget(origin: Vector3): CFrame
 end
 
 local function startDrifting(echo: BasePart, origin: Vector3)
-    
-
     -- Store a flag on the model so we can stop drifting on collect
     echo:SetAttribute("Drifting", true)
 
@@ -98,6 +96,7 @@ function AstralEchoController:StopSpawning()
     for _, echo in self.Echoes do
         echo:Destroy()
     end
+    self.Echoes = {}
 end
 
 function AstralEchoController:SpawnEcho()

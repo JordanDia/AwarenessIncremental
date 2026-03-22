@@ -1,7 +1,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local UpgradeTreeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeTreeConfig)
+
+-- Trees whose root node must NOT be auto-unlocked on join.
+-- They are unlocked explicitly via UnlockTreeRoot() when the player meets the requirement.
+local LOCKED_TREES = {
+    Tree2 = true,
+}
 
 local UpgradeTreeService = Knit.CreateService {
     Name = "UpgradeTreeService",
@@ -10,6 +17,7 @@ local UpgradeTreeService = Knit.CreateService {
         TreeInitialized = Knit.CreateSignal(),
         UpdateVisuals = Knit.CreateSignal(),
         UnlockGranted = Knit.CreateSignal(),
+        DynamicNodeUpdated = Knit.CreateSignal(), -- (treeName, nodeId, value)
     }
 }
 
@@ -19,15 +27,54 @@ function UpgradeTreeService:KnitStart()
     self.RebirthService = Knit.GetService("RebirthService")
     self.CrystalService = Knit.GetService("CrystalService")
     self.UnlockService = Knit.GetService("UnlockService")
-    
+    self.MultiplierService = Knit.GetService("MultiplierService")
+    self.LevelService = Knit.GetService("LevelService")
+
+    -- Per-player tables for dynamic reward tracking
+    self.DynamicRewards = {} -- [player] = { {treeName, nodeId, reward}, ... }
+    self.JoinTimes = {}      -- [player] = os.clock() at profile load
+
     -- Listen for new players
     self.DataService.ProfileLoaded:Connect(function(player, profile)
+        self.JoinTimes[player] = os.clock()
         self:InitializePlayer(player, profile)
     end)
 
     for player, profile in self.DataService.Profiles do
+        self.JoinTimes[player] = os.clock()
         self:InitializePlayer(player, profile)
     end
+
+    -- Save session playtime and clean up dynamic state on leave
+    Players.PlayerRemoving:Connect(function(player)
+        local profile = self.DataService:GetProfile(player)
+        if profile and self.JoinTimes[player] then
+            local sessionSeconds = os.clock() - self.JoinTimes[player]
+            profile.Data.PlaytimeSeconds = (profile.Data.PlaytimeSeconds or 0) + sessionSeconds
+        end
+        self.JoinTimes[player] = nil
+        self.DynamicRewards[player] = nil
+    end)
+
+    -- Update level-based dynamic rewards whenever a player levels up
+    self.LevelService.LevelChanged:Connect(function(player)
+        self:_UpdateDynamicRewardsForSource(player, "Level")
+    end)
+
+    -- Update crystal-based dynamic rewards whenever crystals change
+    self.CrystalService.CrystalsChanged:Connect(function(player)
+        self:_UpdateDynamicRewardsForSource(player, "CrystalCount")
+    end)
+
+    -- Update playtime-based rewards every 60 seconds
+    task.spawn(function()
+        while true do
+            task.wait(60)
+            for player in self.DynamicRewards do
+                self:_UpdateDynamicRewardsForSource(player, "Playtime")
+            end
+        end
+    end)
 
     -- Map currency names to get/remove functions
     self.CurrencyHandlers = {
@@ -60,27 +107,51 @@ function UpgradeTreeService:InitializePlayer(player, profile)
     if not profile.Data.PurchasedNodes then
         profile.Data.UnlockedNodes = {}
     end
-    
+
     -- Initialize each tree's nodes if not already present
-    for treeName, nodes in pairs(UpgradeTreeConfig) do
+    for treeName in UpgradeTreeConfig do
         if not profile.Data.UnlockedNodes[treeName] then
             profile.Data.UnlockedNodes[treeName] = {}
         end
         if not profile.Data.PurchasedNodes[treeName] then
             profile.Data.PurchasedNodes[treeName] = {}
         end
-        
-        -- Always unlock RootNode by default
-        profile.Data.UnlockedNodes[treeName]["RootNode"] = true
+
+        -- Auto-unlock the root node only for trees that don't require a special unlock
+        if not LOCKED_TREES[treeName] then
+            local rootNodeId = UpgradeTreeConfig[treeName][1].NodeId
+            profile.Data.UnlockedNodes[treeName][rootNodeId] = true
+        end
     end
-    
+
+    -- Re-apply multiplier rewards for nodes purchased in a previous session
+    self:RestoreRewards(player)
+
     --print(`Initialized upgrade trees for {player.Name}`)
-    
+
     -- Update visual state of all trees
     self.Client.UpdateVisuals:Fire(player)
-    
+
     -- Fire to client that trees are ready
     self.Client.TreeInitialized:Fire(player)
+end
+
+-- Re-applies Multiplier rewards on login. Unlock rewards are already stored in profile.Data.Unlocks
+function UpgradeTreeService:RestoreRewards(player)
+    for treeName, nodes in UpgradeTreeConfig do
+        for _, nodeConfig in nodes do
+            if self:IsNodePurchased(player, treeName, nodeConfig.NodeId) then
+                for _, reward in ipairs(nodeConfig.Rewards) do
+                    if reward.Type == "Multiplier" then
+                        local source = treeName .. "_" .. nodeConfig.NodeId
+                        self.MultiplierService:SetSource(player, reward.Stat, source, reward.Value)
+                    elseif reward.Type == "Dynamic" then
+                        self:SetupDynamicReward(player, treeName, nodeConfig.NodeId, reward)
+                    end
+                end
+            end
+        end
+    end
 end
 
 -- Get node config
@@ -195,7 +266,7 @@ function UpgradeTreeService:UnlockNode(player, treeName, nodeId)
 
     -- Grant rewards
     for _, reward in ipairs(nodeConfig.Rewards) do
-        self:GrantReward(player, reward)
+        self:GrantReward(player, treeName, nodeId, reward)
     end
 
     -- Unlock children (make them visible)
@@ -210,12 +281,87 @@ function UpgradeTreeService:UnlockNode(player, treeName, nodeId)
     return true
 end
 
-function UpgradeTreeService:GrantReward(player, reward)
-    if reward == "Crystals" then
-        self.UnlockService:Unlock(player, "CrystalCollection")
-        -- Fire to client so it can start spawning immediately without waiting for rejoin
-        self.Client.UnlockGranted:Fire(player, "CrystalCollection")
+function UpgradeTreeService:GrantReward(player, treeName, nodeId, reward)
+    if reward.Type == "Unlock" then
+        self.UnlockService:Unlock(player, reward.Value)
+        self.Client.UnlockGranted:Fire(player, reward.Value)
+    elseif reward.Type == "Multiplier" then
+        local source = treeName .. "_" .. nodeId
+        self.MultiplierService:SetSource(player, reward.Stat, source, reward.Value)
+    elseif reward.Type == "Dynamic" then
+        self:SetupDynamicReward(player, treeName, nodeId, reward)
     end
+end
+
+-- Compute the current multiplier value for a given dynamic source
+function UpgradeTreeService:ComputeDynamicValue(player, source)
+    if source == "Playtime" then
+        local profile = self.DataService:GetProfile(player)
+        if not profile then return 1 end
+        local storedSeconds = profile.Data.PlaytimeSeconds or 0
+        local sessionSeconds = os.clock() - (self.JoinTimes[player] or os.clock())
+        local totalHours = (storedSeconds + sessionSeconds) / 3600
+        -- formula: 1 + sqrt(hours / 7)  →  at 32.5h gives ~3.15x
+        return 1 + math.sqrt(math.max(0, totalHours / 7))
+
+    elseif source == "Level" then
+        -- multiplier = current level directly  →  level 41 gives 41x
+        return math.max(1, self.LevelService:GetLevel(player))
+
+    elseif source == "CrystalCount" then
+        local crystals = self.CrystalService:GetCrystals(player)
+        -- formula: 1 + log10(1 + crystals) * 1.4  →  at 100B gives ~16x
+        return 1 + math.log(1 + crystals, 10) * 1.4
+    end
+
+    return 1
+end
+
+-- Register a dynamic reward and apply it immediately
+function UpgradeTreeService:SetupDynamicReward(player, treeName, nodeId, reward)
+    if not self.DynamicRewards[player] then
+        self.DynamicRewards[player] = {}
+    end
+    -- Avoid duplicate registrations (e.g. RestoreRewards called twice)
+    for _, entry in self.DynamicRewards[player] do
+        if entry.treeName == treeName and entry.nodeId == nodeId and entry.reward.Source == reward.Source then
+            return
+        end
+    end
+    table.insert(self.DynamicRewards[player], { treeName = treeName, nodeId = nodeId, reward = reward })
+    self:_ApplyDynamicReward(player, treeName, nodeId, reward)
+end
+
+-- Compute current value and push it to MultiplierService + notify client
+function UpgradeTreeService:_ApplyDynamicReward(player, treeName, nodeId, reward)
+    local value = self:ComputeDynamicValue(player, reward.Source)
+    local source = treeName .. "_" .. nodeId
+    self.MultiplierService:SetSource(player, reward.Stat, source, value)
+    self.Client.DynamicNodeUpdated:Fire(player, treeName, nodeId, value)
+end
+
+-- Re-compute all dynamic rewards matching a given source for one player
+function UpgradeTreeService:_UpdateDynamicRewardsForSource(player, source)
+    local rewards = self.DynamicRewards[player]
+    if not rewards then return end
+    for _, entry in rewards do
+        if entry.reward.Source == source then
+            self:_ApplyDynamicReward(player, entry.treeName, entry.nodeId, entry.reward)
+        end
+    end
+end
+
+-- Return all current dynamic values for the player (keyed by "treeName_nodeId")
+function UpgradeTreeService:GetAllDynamicValues(player)
+    local result = {}
+    local rewards = self.DynamicRewards[player]
+    if rewards then
+        for _, entry in rewards do
+            local key = entry.treeName .. "_" .. entry.nodeId
+            result[key] = self:ComputeDynamicValue(player, entry.reward.Source)
+        end
+    end
+    return result
 end
 
 -- Setup touch events for nodes
@@ -245,6 +391,38 @@ function UpgradeTreeService:SetupTreeInteractions()
     end
 end
 
+function UpgradeTreeService:GetAllNodeStates(player)
+    local profile = self.DataService:GetProfile(player)
+    if not profile then return { unlocked = {}, purchased = {} } end
+    return {
+        unlocked = profile.Data.UnlockedNodes or {},
+        purchased = profile.Data.PurchasedNodes or {},
+    }
+end
+
+-- Called by UnlockService when a locked tree is unlocked (e.g. Tree2 via Awakening Level 1).
+-- Unlocks the root node, re-restores all purchased rewards, and refreshes client visuals.
+function UpgradeTreeService:UnlockTreeRoot(player, treeName)
+    local profile = self.DataService:GetProfile(player)
+    if not profile then return end
+
+    local treeConfig = UpgradeTreeConfig[treeName]
+    if not treeConfig or #treeConfig == 0 then return end
+
+    if not profile.Data.UnlockedNodes[treeName] then
+        profile.Data.UnlockedNodes[treeName] = {}
+    end
+    if not profile.Data.PurchasedNodes[treeName] then
+        profile.Data.PurchasedNodes[treeName] = {}
+    end
+
+    local rootNodeId = treeConfig[1].NodeId
+    profile.Data.UnlockedNodes[treeName][rootNodeId] = true
+
+    self:RestoreRewards(player)
+    self.Client.UpdateVisuals:Fire(player)
+end
+
 -- Client-facing methods
 function UpgradeTreeService.Client:IsNodeUnlocked(player, treeName, nodeId)
     return self.Server:IsNodeUnlocked(player, treeName, nodeId)
@@ -256,6 +434,14 @@ end
 
 function UpgradeTreeService.Client:CanUnlockNode(player, treeName, nodeId)
     return self.Server:CanUnlockNode(player, treeName, nodeId)
+end
+
+function UpgradeTreeService.Client:GetAllNodeStates(player)
+    return self.Server:GetAllNodeStates(player)
+end
+
+function UpgradeTreeService.Client:GetAllDynamicValues(player)
+    return self.Server:GetAllDynamicValues(player)
 end
 
 return UpgradeTreeService

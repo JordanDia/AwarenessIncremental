@@ -7,7 +7,8 @@ local REBIRTH_COST = 1000 -- Awareness per rebirth
 local RebirthService = Knit.CreateService({
 	Name = "RebirthService",
 	Client = {
-		RebirthsChanged = Knit.CreateSignal(), -- fires when rebirth count changes
+		RebirthsChanged = Knit.CreateSignal(),       -- fires when rebirth count changes
+		RebirthsTotalChanged = Knit.CreateSignal(),  -- fires when lifetime total changes
 		RebirthsToGainUpdated = Knit.CreateSignal(), -- fires when potential rebirths change
 	},
 })
@@ -15,11 +16,13 @@ local RebirthService = Knit.CreateService({
 RebirthService.DataService = nil
 RebirthService.AwarenessService = nil
 RebirthService.UpgradeService = nil
+RebirthService.MultiplierService = nil
 
 function RebirthService:KnitStart()
 	self.DataService = Knit.GetService("DataService")
 	self.AwarenessService = Knit.GetService("AwarenessService")
 	self.UpgradeService = Knit.GetService("UpgradeService")
+	self.MultiplierService = Knit.GetService("MultiplierService")
 
 	self.DataService.ProfileLoaded:Connect(function(player, profile)
 		if not profile then return end
@@ -65,10 +68,9 @@ end
 -- Accounts for upgrade multiplier
 function RebirthService:GetTotalRebirthsToGain(player)
     local baseRebirths = self:GetRebirthsToGain(player)
-    local multiplier = self.UpgradeService:GetUpgradeEffect(player, "MultiplyRebirthAmount") or 1
-	local crystalMultiplier = self.UpgradeService:GetUpgradeEffect(player, "CrystalRebirthMultiplier") or 1
+    local multiplier = self.MultiplierService:GetMultiplier(player, "Rebirth")
 
-    return baseRebirths * multiplier * crystalMultiplier
+    return baseRebirths * multiplier
 end
 -- Get the cost per rebirth
 function RebirthService:GetRebirthCost()
@@ -102,13 +104,14 @@ function RebirthService:PerformRebirth(player)
 	self.AwarenessService:SetAwareness(player, 0)
 	-- Add rebirths
 	profile.Data.Rebirths = (profile.Data.Rebirths or 0) + multipliedRebirths
+	profile.Data.RebirthsTotal = (profile.Data.RebirthsTotal or 0) + multipliedRebirths
 
-	-- Reset upgrades (optional - you might want this)
 	profile.Data.Upgrades.AwarenessPerMeditation = 1
 	profile.Data.Upgrades.MeditationSpeed = 1
 
 	-- Fire events
 	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
+	self.Client.RebirthsTotalChanged:Fire(player, profile.Data.RebirthsTotal)
 	self.Client.RebirthsToGainUpdated:Fire(player, 0) -- Reset to 0 after rebirth
 
 	print(`Player {player.Name} rebirthed! Gained {rebirthsToGain} rebirths. Total: {profile.Data.Rebirths}`)
@@ -119,14 +122,30 @@ end
 function RebirthService:RemoveRebirths(player, amount)
 	local profile = self.DataService:GetProfile(player)
 	if not profile then return false end
-	
+
 	if profile.Data.Rebirths < amount then
 		return false
 	end
-	
+
 	profile.Data.Rebirths = profile.Data.Rebirths - amount
 	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
 	return true
+end
+
+function RebirthService:AddRebirths(player, amount)
+	local profile = self.DataService:GetProfile(player)
+	if not profile then return end
+	profile.Data.Rebirths = (profile.Data.Rebirths or 0) + amount
+	profile.Data.RebirthsTotal = (profile.Data.RebirthsTotal or 0) + amount
+	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
+	self.Client.RebirthsTotalChanged:Fire(player, profile.Data.RebirthsTotal)
+end
+
+function RebirthService:ResetRebirths(player)
+	local profile = self.DataService:GetProfile(player)
+	if not profile then return end
+	profile.Data.Rebirths = 0
+	self.Client.RebirthsChanged:Fire(player, 0)
 end
 
 -- =======================

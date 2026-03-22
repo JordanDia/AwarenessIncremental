@@ -6,6 +6,7 @@ local UnlockService = Knit.CreateService { Name = "UnlockService" }
 function UnlockService:KnitStart()
     self.DataService = Knit.GetService("DataService")
     self.CrystalService = Knit.GetService("CrystalService")
+    self.UpgradeTreeService = Knit.GetService("UpgradeTreeService")
 end
 
 function UnlockService:IsUnlocked(player, unlockId)
@@ -25,6 +26,8 @@ function UnlockService:Unlock(player, unlockId)
 
     if unlockId == "CrystalCollection" then
         self.CrystalService:StartCrystals(player)
+    elseif unlockId == "Tree2" then
+        self.UpgradeTreeService:UnlockTreeRoot(player, "Tree2")
     end
 
     return true

@@ -14,7 +14,9 @@ return function(
 
     return scope:New "Frame" {
         Name = "UpgradeTreeFrame",
-        Size = UDim2.fromScale(1, 1),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.fromScale(0.8, 0.8),
+        Position = UDim2.fromScale(0.5, 0.5),
         BackgroundTransparency = 1,
 
         [Fusion.Children] = {

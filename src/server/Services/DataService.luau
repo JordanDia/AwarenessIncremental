@@ -20,9 +20,19 @@ local PROFILE_TEMPLATE = {
 	Awareness = 0,
 	Rebirths = 0,
 	Crystals = 0,
+	AstralEchoes = 0,
+	Harmony = 0,
+	AwakeningLevel = 0,
+
+	AwarenessTotal = 0,
+	RebirthsTotal = 0,
+	CrystalsTotal = 0,
+	AstralEchoesTotal = 0,
+	HarmonyTotal = 0,
 
 	XP = 0,
 	Level = 1,
+	PlaytimeSeconds = 0,
 
 	Upgrades = {
 
@@ -51,11 +61,13 @@ local PROFILE_TEMPLATE = {
         -- Example: Tree1 = { RootNode = true, NodeA = false }
 
 		Tree1 = {},
+		Tree2 = {}, -- locked until Awakening Level 1
     },
 
 	PurchasedNodes = {
 
 		Tree1 = {},
+		Tree2 = {},
 	},
 
 	Unlocks = {},

@@ -3,93 +3,81 @@ local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
---[[
-    MultiplierService
-    
-    Tracks named multiplier sources per player per stat.
-    All sources are multiplied together (multiplicative stacking).
-    
-    Example:
-        MultiplierService:SetSource(player, "Awareness", "Rebirth", 50)
-        MultiplierService:SetSource(player, "Awareness", "Crystal", 250)
-        MultiplierService:GetMultiplier(player, "Awareness") --> 12500
-        
-    Sources:
-        "Rebirth"     - bought with rebirth points, up to 50x
-        "Crystal"     - crystal upgrades, up to 250x
-        "Awakening"   - passive bonus from awakening resets e.g. 1.20x
-        "UpgradeTree" - future upgrade tree bonuses
-]]
-
 local MultiplierService = Knit.CreateService {
     Name = "MultiplierService",
-    Client = {
-        MultiplierChanged = Knit.CreateSignal(), -- (stat: string, finalMultiplier: number)
-    }
+    Client = {},
 }
 
 MultiplierService.MultiplierChanged = Signal.new() -- (player, stat, finalMultiplier)
 
--- Structure: _multipliers[player][stat][source] = value
-MultiplierService._multipliers = {}
+-- Structure: Multipliers[player][stat][source] = value
+MultiplierService.Multipliers = {}
+
+function MultiplierService:_ApplyWalkSpeed(player: Player, multiplier: number)
+    local character = player.Character
+    if not character then return end
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+    humanoid.WalkSpeed = 16 * multiplier
+end
 
 function MultiplierService:KnitStart()
     Players.PlayerRemoving:Connect(function(player)
-        self._multipliers[player] = nil
+        self.Multipliers[player] = nil
+    end)
+
+    self.MultiplierChanged:Connect(function(player, stat, multiplier)
+        if stat == "WalkSpeed" then
+            self:_ApplyWalkSpeed(player, multiplier)
+        end
+    end)
+
+    Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function()
+            local multiplier = self:GetMultiplier(player, "WalkSpeed")
+            self:_ApplyWalkSpeed(player, multiplier)
+        end)
     end)
 end
 
 -- Internal: get or create the table for a player
-function MultiplierService:_getPlayerTable(player: Player)
-    if not self._multipliers[player] then
-        self._multipliers[player] = {}
+function MultiplierService:_GetPlayerTable(player: Player)
+    if not self.Multipliers[player] then
+        self.Multipliers[player] = {}
     end
-    return self._multipliers[player]
+    return self.Multipliers[player]
 end
 
 -- Internal: recalculate and fire changed signals
-function MultiplierService:_recalculate(player: Player, stat: string)
+function MultiplierService:_Recalculate(player: Player, stat: string)
     local final = self:GetMultiplier(player, stat)
     self.MultiplierChanged:Fire(player, stat, final)
-    self.Client.MultiplierChanged:Fire(player, stat, final)
 end
 
---[[ 
-    Set a named source's multiplier for a stat.
-    
-    player  : Player
-    stat    : string  e.g. "Awareness", "CrystalValue"
-    source  : string  e.g. "Rebirth", "Crystal", "Awakening"
-    value   : number  the multiplier value (1 = no effect)
-]]
+-- Set a named source's multiplier for a stat (e.g. stat="Awareness", source="Rebirth", value=50)
 function MultiplierService:SetSource(player: Player, stat: string, source: string, value: number)
-    local playerTable = self:_getPlayerTable(player)
+    local playerTable = self:_GetPlayerTable(player)
 
     if not playerTable[stat] then
         playerTable[stat] = {}
     end
 
     playerTable[stat][source] = value
-    self:_recalculate(player, stat)
+    self:_Recalculate(player, stat)
 end
 
---[[
-    Remove a named source for a stat (treated as 1x going forward).
-]]
+-- Remove a named source for a stat (treated as 1x going forward)
 function MultiplierService:RemoveSource(player: Player, stat: string, source: string)
-    local playerTable = self:_getPlayerTable(player)
+    local playerTable = self:_GetPlayerTable(player)
     if not playerTable[stat] then return end
 
     playerTable[stat][source] = nil
-    self:_recalculate(player, stat)
+    self:_Recalculate(player, stat)
 end
 
---[[
-    Get the final combined multiplier for a stat.
-    Returns 1 if no sources are registered.
-]]
+-- Get the final combined multiplier for a stat. Returns 1 if no sources are registered
 function MultiplierService:GetMultiplier(player: Player, stat: string): number
-    local playerTable = self._multipliers[player]
+    local playerTable = self.Multipliers[player]
     if not playerTable or not playerTable[stat] then return 1 end
 
     local result = 1
@@ -100,13 +88,9 @@ function MultiplierService:GetMultiplier(player: Player, stat: string): number
     return result
 end
 
---[[
-    Get a breakdown of all sources for a stat.
-    Useful for debug or a stats UI.
-    Returns: { [source: string]: value: number }
-]]
+-- Get a breakdown of all sources for a stat, useful for debug or a stats UI
 function MultiplierService:GetSources(player: Player, stat: string): { [string]: number }
-    local playerTable = self._multipliers[player]
+    local playerTable = self.Multipliers[player]
     if not playerTable or not playerTable[stat] then return {} end
 
     -- Return a shallow copy so callers can't mutate internals
@@ -117,25 +101,18 @@ function MultiplierService:GetSources(player: Player, stat: string): { [string]:
     return copy
 end
 
---[[
-    Reset all sources for a stat. 
-    Use this on Awakening reset to wipe upgrade tree bonuses
-    while keeping passive awakening bonuses by re-registering them after.
-]]
+-- Reset all sources for a stat
 function MultiplierService:ResetStat(player: Player, stat: string)
-    local playerTable = self._multipliers[player]
+    local playerTable = self.Multipliers[player]
     if not playerTable then return end
 
     playerTable[stat] = {}
-    self:_recalculate(player, stat)
+    self:_Recalculate(player, stat)
 end
 
---[[
-    Reset all multipliers for a player.
-    Use on full reset if needed.
-]]
+-- Reset all multipliers for a player
 function MultiplierService:ResetPlayer(player: Player)
-    self._multipliers[player] = {}
+    self.Multipliers[player] = {}
 end
 
 -- Client: read-only access to their own multipliers
