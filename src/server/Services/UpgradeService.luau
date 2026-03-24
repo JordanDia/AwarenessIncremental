@@ -29,6 +29,7 @@ function UpgradeService:KnitStart()
 	self.AwarenessService = Knit.GetService("AwarenessService")
 	self.RebirthService = Knit.GetService("RebirthService")
 	self.CrystalService = Knit.GetService("CrystalService")
+	self.AstralEchoService = Knit.GetService("AstralEchoService")
 	self.MultiplierService = Knit.GetService("MultiplierService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
@@ -117,8 +118,13 @@ function UpgradeService:BuyUpgrade(player, upgradeId)
 	elseif config.Currency == "Crystals" then
 		local crystals = self.CrystalService:GetCrystals(player)
 		if crystals >= cost then
-			-- Deduct rebirths (you'll need to add this method to RebirthService)
 			self.CrystalService:RemoveCrystals(player, cost)
+			canAfford = true
+		end
+	elseif config.Currency == "AstralEchoes" then
+		local echoes = self.AstralEchoService:GetEchoes(player)
+		if echoes >= cost then
+			self.AstralEchoService:RemoveEchoes(player, cost)
 			canAfford = true
 		end
 	end
@@ -161,6 +167,8 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 		currentCurrency = self.RebirthService:GetRebirths(player)
 	elseif config.Currency == "Crystals" then
 		currentCurrency = self.CrystalService:GetCrystals(player)
+	elseif config.Currency == "AstralEchoes" then
+		currentCurrency = self.AstralEchoService:GetEchoes(player)
 	end
 
 	-- Calculate how many levels we can buy
@@ -192,6 +200,8 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 			self.RebirthService:RemoveRebirths(player, totalCost)
 		elseif config.Currency == "Crystals" then
 			self.CrystalService:RemoveCrystals(player, totalCost)
+		elseif config.Currency == "AstralEchoes" then
+			self.AstralEchoService:RemoveEchoes(player, totalCost)
 		end
 
 		-- Update level once

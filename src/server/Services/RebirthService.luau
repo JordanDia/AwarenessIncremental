@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local REBIRTH_COST = 1000 -- Awareness per rebirth
 
@@ -12,6 +13,8 @@ local RebirthService = Knit.CreateService({
 		RebirthsToGainUpdated = Knit.CreateSignal(), -- fires when potential rebirths change
 	},
 })
+
+RebirthService.RebirthsChanged = Signal.new() -- (player, rebirths)
 
 RebirthService.DataService = nil
 RebirthService.AwarenessService = nil
@@ -110,6 +113,7 @@ function RebirthService:PerformRebirth(player)
 	profile.Data.Upgrades.MeditationSpeed = 1
 
 	-- Fire events
+	self.RebirthsChanged:Fire(player, profile.Data.Rebirths)
 	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
 	self.Client.RebirthsTotalChanged:Fire(player, profile.Data.RebirthsTotal)
 	self.Client.RebirthsToGainUpdated:Fire(player, 0) -- Reset to 0 after rebirth
@@ -128,6 +132,7 @@ function RebirthService:RemoveRebirths(player, amount)
 	end
 
 	profile.Data.Rebirths = profile.Data.Rebirths - amount
+	self.RebirthsChanged:Fire(player, profile.Data.Rebirths)
 	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
 	return true
 end
@@ -137,6 +142,7 @@ function RebirthService:AddRebirths(player, amount)
 	if not profile then return end
 	profile.Data.Rebirths = (profile.Data.Rebirths or 0) + amount
 	profile.Data.RebirthsTotal = (profile.Data.RebirthsTotal or 0) + amount
+	self.RebirthsChanged:Fire(player, profile.Data.Rebirths)
 	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
 	self.Client.RebirthsTotalChanged:Fire(player, profile.Data.RebirthsTotal)
 end
@@ -145,6 +151,7 @@ function RebirthService:ResetRebirths(player)
 	local profile = self.DataService:GetProfile(player)
 	if not profile then return end
 	profile.Data.Rebirths = 0
+	self.RebirthsChanged:Fire(player, 0)
 	self.Client.RebirthsChanged:Fire(player, 0)
 end
 

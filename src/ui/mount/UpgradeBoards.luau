@@ -1,4 +1,3 @@
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
@@ -130,6 +129,18 @@ return function(parent)
             "rbxassetid://74165606343290",
             "Crystals"
         ),
+        MakeUpgradeBoard("AstralEchoValue",
+            workspace.UpgradeBoards:WaitForChild("AstralEchoValueBoard"),
+            "Increase Astral Echo value per collection",
+            "rbxassetid://118132965740444",
+            "Astral Echoes"
+        ),
+        MakeUpgradeBoard("VeilDuration",
+            workspace.UpgradeBoards:WaitForChild("VeilDurationBoard"),
+            "Increase how long the Veil lasts",
+            "rbxassetid://118132965740444",
+            "Astral Echoes"
+        ),
     }
 
     local rebirthUpgradeBoards = {
@@ -161,7 +172,7 @@ return function(parent)
     }
 
 
-    UpgradeService.UpgradeUpdated:Connect(function(upgradeId, newLevel)
+    UpgradeService.UpgradeUpdated:Connect(function(upgradeId, _newLevel)
         --print(`Upgrade {upgradeId} updated to level {newLevel}`)
 
         if upgradeId == "MultiplyRebirthAmount" then
@@ -183,7 +194,7 @@ return function(parent)
 
  
      -- Mount rebirth board
-    local rebirthSurfaceGui = scope:New "SurfaceGui" {
+    scope:New "SurfaceGui" {
         Name = "RebirthBoard",
         Adornee = rebirthBoard.Part,
         Face = Enum.NormalId.Front,
@@ -199,7 +210,7 @@ return function(parent)
         }
     }
 
-    RebirthService.RebirthsToGainUpdated:Connect(function(newRebirthsToGain)
+    RebirthService.RebirthsToGainUpdated:Connect(function(_newRebirthsToGain)
         rebirthBoard.Value:set(RebirthService:GetTotalRebirthsToGain())
     end)
 

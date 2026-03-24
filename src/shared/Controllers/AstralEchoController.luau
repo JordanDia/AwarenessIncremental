@@ -5,6 +5,8 @@ local Lighting = game:GetService("Lighting")
 local SoundService = game:GetService("SoundService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
+local PopSound: Sound = SoundService:WaitForChild("Pop")
+
 local AstralEchoController = Knit.CreateController { Name = "AstralEchoController" }
 
 AstralEchoController.SeeThroughWorldActivated = false
@@ -148,6 +150,8 @@ function AstralEchoController:CollectEcho(echo: Model)
     end
 
     echo:Destroy()
+
+    PopSound:Play()
 
     -- Tell server
     self.AstralEchoService.CollectEcho:Fire()

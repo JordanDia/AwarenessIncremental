@@ -129,8 +129,8 @@ end
 function DataService:PlayerRemoving(player: Player)
 	local profile = DataService.Profiles[player]
 	if profile ~= nil then
-		print(profile)
-		profile.Data = {}
+		print(profile.Data)
+		--profile.Data = {}
 		profile:EndSession()
 	end
 end

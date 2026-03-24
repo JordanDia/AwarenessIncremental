@@ -26,6 +26,7 @@ function UpgradeTreeService:KnitStart()
     self.AwarenessService = Knit.GetService("AwarenessService")
     self.RebirthService = Knit.GetService("RebirthService")
     self.CrystalService = Knit.GetService("CrystalService")
+    self.AstralEchoService = Knit.GetService("AstralEchoService")
     self.UnlockService = Knit.GetService("UnlockService")
     self.MultiplierService = Knit.GetService("MultiplierService")
     self.LevelService = Knit.GetService("LevelService")
@@ -66,6 +67,16 @@ function UpgradeTreeService:KnitStart()
         self:_UpdateDynamicRewardsForSource(player, "CrystalCount")
     end)
 
+    -- Update echo-based dynamic rewards whenever astral echoes change
+    self.AstralEchoService.EchoesChanged:Connect(function(player)
+        self:_UpdateDynamicRewardsForSource(player, "AstralEchoCount")
+    end)
+
+    -- Update rebirth-based dynamic rewards whenever rebirths change
+    self.RebirthService.RebirthsChanged:Connect(function(player)
+        self:_UpdateDynamicRewardsForSource(player, "RebirthCount")
+    end)
+
     -- Update playtime-based rewards every 60 seconds
     task.spawn(function()
         while true do
@@ -91,6 +102,11 @@ function UpgradeTreeService:KnitStart()
         Crystals = {
             Get = function(player) return self.CrystalService:GetCrystals(player) end,
             Remove = function(player, amount) return self.CrystalService:RemoveCrystals(player, amount) end,
+        },
+
+        ["Astral Echoes"] = {
+            Get = function(player) return self.AstralEchoService:GetEchoes(player) end,
+            Remove = function(player, amount) return self.AstralEchoService:RemoveEchoes(player, amount) end,
         },
     }
 
@@ -312,6 +328,16 @@ function UpgradeTreeService:ComputeDynamicValue(player, source)
         local crystals = self.CrystalService:GetCrystals(player)
         -- formula: 1 + log10(1 + crystals) * 1.4  →  at 100B gives ~16x
         return 1 + math.log(1 + crystals, 10) * 1.4
+
+    elseif source == "RebirthCount" then
+        local rebirths = self.RebirthService:GetRebirths(player)
+        -- formula: 1 + log10(1 + rebirths) * 1.4
+        return 1 + math.log(1 + rebirths, 10) * 1.4
+
+    elseif source == "AstralEchoCount" then
+        local echoes = self.AstralEchoService:GetEchoes(player)
+        -- formula: 1 + log10(1 + echoes) * 1.4
+        return 1 + math.log(1 + echoes, 10) * 1.4
     end
 
     return 1
