@@ -33,6 +33,12 @@ function UnlockService:Unlock(player, unlockId)
     return true
 end
 
+function UnlockService:Revoke(player, unlockId)
+    local profile = self.DataService:GetProfile(player)
+    if not profile then return end
+    profile.Data.Unlocks[unlockId] = nil
+end
+
 function UnlockService.Client:IsUnlocked(player, unlockId)
     return self.Server:IsUnlocked(player, unlockId)
 end

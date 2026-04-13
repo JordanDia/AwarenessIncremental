@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local UpgradeTreeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeTreeConfig)
 
@@ -12,6 +13,8 @@ local LOCKED_TREES = {
 
 local UpgradeTreeService = Knit.CreateService {
     Name = "UpgradeTreeService",
+    -- Server-side signal: fires (player, treeName, nodeId) after a successful purchase
+    NodePurchased = Signal.new(),
     Client = {
         NodeUnlocked = Knit.CreateSignal(),
         TreeInitialized = Knit.CreateSignal(),
@@ -210,7 +213,7 @@ function UpgradeTreeService:CanAffordNode(player, treeName, nodeId)
 
     local handler = self.CurrencyHandlers[nodeConfig.Cost.Currency]
     if not handler then
-        warn(`Unknown currency: {nodeConfig.Cost.Currency}`)
+        --warn(`Unknown currency: {nodeConfig.Cost.Currency}`)
         return false
     end
 
@@ -253,19 +256,19 @@ function UpgradeTreeService:UnlockNode(player, treeName, nodeId)
 
     -- Must be visible/available
     if not self:IsNodeUnlocked(player, treeName, nodeId) then
-        warn(`Node {nodeId} is not available yet`)
+        --warn(`Node {nodeId} is not available yet`)
         return false
     end
 
     -- Must not already be purchased
     if self:IsNodePurchased(player, treeName, nodeId) then
-        warn(`Node {nodeId} already purchased`)
+        --warn(`Node {nodeId} already purchased`)
         return false
     end
 
     -- Must be able to afford it
     if not self:CanAffordNode(player, treeName, nodeId) then
-        warn(`Player {player.Name} cannot afford node {nodeId}`)
+        --warn(`Player {player.Name} cannot afford node {nodeId}`)
         return false
     end
 
@@ -292,6 +295,7 @@ function UpgradeTreeService:UnlockNode(player, treeName, nodeId)
 
     self.Client.NodeUnlocked:Fire(player, treeName, nodeId, nodeConfig.Rewards)
     self.Client.UpdateVisuals:Fire(player)
+    self.NodePurchased:Fire(player, treeName, nodeId)
 
     print(`Player {player.Name} purchased node {nodeId} in tree {treeName}`)
     return true
@@ -446,6 +450,34 @@ function UpgradeTreeService:UnlockTreeRoot(player, treeName)
     profile.Data.UnlockedNodes[treeName][rootNodeId] = true
 
     self:RestoreRewards(player)
+    self.Client.UpdateVisuals:Fire(player)
+end
+
+-- Wipes all purchased and unlocked nodes for a tree, removes their multiplier sources,
+-- and refreshes client visuals. Called on awakening so the player must re-buy the tree.
+function UpgradeTreeService:ResetTree(player, treeName)
+    local profile = self.DataService:GetProfile(player)
+    if not profile then return end
+
+    local treeConfig = UpgradeTreeConfig[treeName]
+    if not treeConfig then return end
+
+    -- Remove multiplier sources for every purchased node before wiping
+    for _, nodeConfig in treeConfig do
+        if self:IsNodePurchased(player, treeName, nodeConfig.NodeId) then
+            for _, reward in ipairs(nodeConfig.Rewards) do
+                if reward.Type == "Multiplier" then
+                    local source = treeName .. "_" .. nodeConfig.NodeId
+                    self.MultiplierService:SetSource(player, reward.Stat, source, 1)
+                end
+            end
+        end
+    end
+
+    -- Clear all node state for this tree
+    profile.Data.PurchasedNodes[treeName] = {}
+    profile.Data.UnlockedNodes[treeName] = {}
+
     self.Client.UpdateVisuals:Fire(player)
 end
 

@@ -3,6 +3,11 @@
 registry = "test"
 
 [[package]]
+name = "1foreverhd/topbarplus"
+version = "3.4.0"
+dependencies = []
+
+[[package]]
 name = "aspecky/profilestore"
 version = "0.3.0"
 dependencies = []
@@ -20,17 +25,12 @@ dependencies = []
 [[package]]
 name = "jordan/awarenessincremental"
 version = "0.1.0"
-dependencies = [["FormatNumber", "kumarion/formatnumber@0.0.1"], ["Fusion", "elttob/fusion@0.3.0"], ["Knit", "sleitnick/knit@1.7.0"], ["Networker", "leifstout/networker@0.3.1"], ["Signal", "sleitnick/signal@2.0.3"], ["ProfileStore", "aspecky/profilestore@0.3.0"]]
+dependencies = [["FormatNumber", "kumarion/formatnumber@0.0.1"], ["Fusion", "elttob/fusion@0.3.0"], ["Knit", "sleitnick/knit@1.7.0"], ["Signal", "sleitnick/signal@2.0.3"], ["TopbarPlus", "1foreverhd/topbarplus@3.4.0"], ["ProfileStore", "aspecky/profilestore@0.3.0"]]
 
 [[package]]
 name = "kumarion/formatnumber"
 version = "0.0.1"
 dependencies = []
-
-[[package]]
-name = "leifstout/networker"
-version = "0.3.1"
-dependencies = [["Signal", "sleitnick/signal@2.0.3"]]
 
 [[package]]
 name = "sleitnick/comm"

@@ -5,6 +5,7 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 --   Label       (string | Value<string>)
 --   LayoutOrder (number)
 --   Visible     (boolean | Value<boolean>)
+--   Active      (Value<boolean>?)  -- when true, button glows green
 --   OnActivated (function)
 
 return function(scope: Fusion.Scope, props)
@@ -12,8 +13,11 @@ return function(scope: Fusion.Scope, props)
     local isHovered = scope:Value(false)
     local isPressed = scope:Value(false)
 
-    local bgColor = scope:Computed(function(use)
-        if use(isPressed) then
+    local targetColor = scope:Computed(function(use)
+        local active = props.Active and use(props.Active)
+        if active then
+            return Color3.fromRGB(80, 200, 120)
+        elseif use(isPressed) then
             return Color3.fromRGB(50, 50, 50)
         elseif use(isHovered) then
             return Color3.fromRGB(75, 75, 75)
@@ -21,6 +25,8 @@ return function(scope: Fusion.Scope, props)
             return Color3.fromRGB(60, 60, 60)
         end
     end)
+
+    local bgColor = scope:Spring(targetColor, 12, 0.8)
 
     return scope:New "TextButton" {
         Name = props.Name or "AbilityButton",

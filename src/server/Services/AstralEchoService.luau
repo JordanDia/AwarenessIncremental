@@ -21,6 +21,7 @@ function AstralEchoService:KnitStart()
     self.UnlockService = Knit.GetService("UnlockService")
     self.UpgradeService = Knit.GetService("UpgradeService")
     self.MultiplierService = Knit.GetService("MultiplierService")
+    self.LevelService = Knit.GetService("LevelService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         -- if self.UnlockService:IsUnlocked(player, "AstralEchoCollection") then
@@ -89,6 +90,7 @@ function AstralEchoService:OnEchoCollected(player)
     local finalValue = math.round(value * multiplier)
 
     self:AddEchoes(player, finalValue)
+    self.LevelService:AddXP(player, 4)
 end
 
 function AstralEchoService:StartEchoes(player)

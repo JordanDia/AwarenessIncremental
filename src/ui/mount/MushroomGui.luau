@@ -68,7 +68,7 @@ return function(parent)
 
     scope:New "BillboardGui" {
         Name            = "MushroomGui",
-        Adornee         = workspace:WaitForChild("Mushroom"),
+        Adornee         = workspace:WaitForChild("MysticalForest"):WaitForChild("Mushroom"),
         Size            = UDim2.fromScale(6, 4),
         StudsOffset     = Vector3.new(0, 7, 0),
         AlwaysOnTop     = false,

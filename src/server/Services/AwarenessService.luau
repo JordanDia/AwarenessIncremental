@@ -5,12 +5,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
+local MEDITATION_RADIUS = 60 -- studs
+
 local AwarenessService = Knit.CreateService {
     Name = "AwarenessService",
     Client = {
-        AwarenessChanged = Knit.CreateSignal(),
+        AwarenessChanged      = Knit.CreateSignal(),
         AwarenessTotalChanged = Knit.CreateSignal(),
-        DeepThoughtEffect = Knit.CreateSignal()
+        DeepThoughtEffect     = Knit.CreateSignal(),
+        MeditationStarted     = Knit.CreateSignal(),
+        MeditationStopped     = Knit.CreateSignal(),
     }
 }
 
@@ -20,12 +24,16 @@ AwarenessService.LevelService = nil
 AwarenessService.MultiplierService = nil
 
 AwarenessService.AwarenessChanged = Signal.new() -- Fires (player, newAwareness)
+AwarenessService.MeditationTick = Signal.new()  -- Fires (player, interval) while meditating
+AwarenessService.AwarenessEarned = Signal.new() -- Fires (player, amount) on each earn
+AwarenessService._meditateAnywhereActive = {}
 
 function AwarenessService:KnitStart()
     self.DataService = Knit.GetService("DataService")
     self.UpgradeService = Knit.GetService("UpgradeService")
     self.LevelService = Knit.GetService("LevelService")
     self.MultiplierService = Knit.GetService("MultiplierService")
+    self.GamepassService = Knit.GetService("GamepassService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         if not profile then return end
@@ -37,6 +45,10 @@ function AwarenessService:KnitStart()
         self:InitializePlayer(player, profile)
     end
 
+    Players.PlayerRemoving:Connect(function(player)
+        self._meditateAnywhereActive[player] = nil
+    end)
+
     self.AwarenessChanged:Connect(function(player, newAwareness, isDeepThought)
         self.Client.AwarenessChanged:Fire(player, newAwareness, isDeepThought)
     end)
@@ -47,31 +59,63 @@ function AwarenessService:InitializePlayer(player, profile)
     --print(`Awareness for player {player.Name} is {profile.Data.Awareness}`)
 
     local randomGenerator = Random.new(os.clock())
+    local meditationGrounds = workspace:WaitForChild("Map"):WaitForChild("MeditationGrounds")
+
+    local wasInRange = false
 
     task.spawn(function()
         while player.Parent do
-            local increment = self.UpgradeService:GetUpgradeEffect(player, "AwarenessPerMeditation")
-            local multiplier = self.MultiplierService:GetMultiplier(player, "Awareness")
             local interval = self.UpgradeService:GetUpgradeEffect(player, "MeditationSpeed")
 
-            --print(`Incrementing awareness for {player.Name} by {increment} every {interval} seconds`)
-            local finalIncrement = math.round(increment * multiplier)
-
-            -- "Deep Thought Chance"
-            local deepThoughtChance = self.UpgradeService:GetUpgradeEffect(player, "IncreaseDeepThoughtChance")
-            local randomNumber = randomGenerator:NextInteger(1, 100)
-            local isDeepThought = false
-
-            if randomNumber < deepThoughtChance then
-                finalIncrement *= 3
-                self.Client.DeepThoughtEffect:Fire(player)
-                isDeepThought = true
+            -- Proximity check (bypassed if Meditate Anywhere is active)
+            local inRange = self._meditateAnywhereActive[player] == true
+            if not inRange then
+                local character = player.Character
+                if character then
+                    local root = character:FindFirstChild("HumanoidRootPart")
+                    if root then
+                        local groundsPos = meditationGrounds:IsA("BasePart")
+                            and meditationGrounds.Position
+                            or meditationGrounds:GetPivot().Position
+                        inRange = (root.Position - groundsPos).Magnitude <= MEDITATION_RADIUS
+                    end
+                end
             end
 
-            AwarenessService:AddAwareness(player, finalIncrement, isDeepThought)
-            self.LevelService:AddXP(player, 2)
-            
+            if inRange ~= wasInRange then
+                if inRange then
+                    self.Client.MeditationStarted:Fire(player)
+                else
+                    self.Client.MeditationStopped:Fire(player)
+                end
+                wasInRange = inRange
+            end
+
+            if inRange then
+                local increment = self.UpgradeService:GetUpgradeEffect(player, "AwarenessPerMeditation")
+                local multiplier = self.MultiplierService:GetMultiplier(player, "Awareness")
+                local finalIncrement = math.round(increment * multiplier)
+
+                -- "Deep Thought Chance"
+                local deepThoughtChance = self.UpgradeService:GetUpgradeEffect(player, "IncreaseDeepThoughtChance")
+                local isDeepThought = false
+                if randomGenerator:NextInteger(1, 100) < deepThoughtChance then
+                    finalIncrement *= 3
+                    self.Client.DeepThoughtEffect:Fire(player)
+                    isDeepThought = true
+                end
+
+                AwarenessService:AddAwareness(player, finalIncrement, isDeepThought)
+                self.LevelService:AddXP(player, 1)
+                AwarenessService.MeditationTick:Fire(player, interval)
+            end
+
             task.wait(interval)
+        end
+
+        -- Player left the game; ensure stopped signal fires if they were meditating
+        if wasInRange then
+            self.Client.MeditationStopped:Fire(player)
         end
     end)
 end
@@ -90,6 +134,7 @@ function AwarenessService:AddAwareness(player: Player, amount: number, isDeepTho
     profile.Data.AwarenessTotal = (profile.Data.AwarenessTotal or 0) + amount
     self.AwarenessChanged:Fire(player, profile.Data.Awareness, isDeepThought)
     self.Client.AwarenessTotalChanged:Fire(player, profile.Data.AwarenessTotal)
+    self.AwarenessEarned:Fire(player, amount)
     return profile.Data.Awareness
 end
 
@@ -114,6 +159,17 @@ end
 -- =======================
 function AwarenessService.Client:GetAwareness(player)
     return self.Server:GetAwareness(player)
+end
+
+-- Toggle Meditate Anywhere for a player. Returns (success, active).
+-- success=false means the player doesn't own the gamepass.
+function AwarenessService.Client:ToggleMeditateAnywhere(player)
+    if not self.Server.GamepassService:OwnsMeditateAnywhere(player) then
+        return false, false
+    end
+    local active = not self.Server._meditateAnywhereActive[player]
+    self.Server._meditateAnywhereActive[player] = active
+    return true, active
 end
 
 function AwarenessService.Client:AddAwareness(player, amount: number)

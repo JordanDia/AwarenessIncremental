@@ -99,7 +99,7 @@ return function(scope, props)
                 LayoutOrder            = 9,
                 Size                   = UDim2.fromScale(0.9, 0.07),
                 BackgroundTransparency = 1,
-                Text                   = "⚠ Resets Awareness, Rebirths, Crystals & Astral Echoes",
+                Text                   = "⚠ Resets Awareness, Rebirths, Crystals, Astral Echoes, and all upgrade boards",
                 TextScaled             = true,
                 TextWrapped            = true,
                 FontFace               = Font.fromName("Montserrat", Enum.FontWeight.Bold),

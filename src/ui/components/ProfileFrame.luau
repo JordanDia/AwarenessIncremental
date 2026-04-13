@@ -12,10 +12,21 @@ local FormatNumber = require(ReplicatedStorage.Packages.FormatNumber).Simple.For
 --   RebirthsTotal     (Value<number>)
 --   CrystalsTotal     (Value<number>)
 --   AstralEchoesTotal (Value<number>)
---   HarmonyTotal      (Value<number>)
+--   FirstPlayed       (Value<string>)
 
 return function(scope: Fusion.Scope, props)
     local player = Players.LocalPlayer
+
+    -- Load headshot asynchronously
+    local headshotUrl = scope:Value("")
+    task.spawn(function()
+        local url, _ = Players:GetUserThumbnailAsync(
+            player.UserId,
+            Enum.ThumbnailType.HeadShot,
+            Enum.ThumbnailSize.Size420x420
+        )
+        headshotUrl:set(url)
+    end)
 
     -- Stat tile: value is a reactive Value<number>, displayed with FormatNumber
     local function StatTile(order: number, label: string, value: Fusion.UsedAs<number>, color: Color3)
@@ -142,7 +153,7 @@ return function(scope: Fusion.Scope, props)
                         Position         = UDim2.fromScale(0.02, 0.5),
                         Size             = UDim2.fromScale(0, 0.8),
                         BackgroundColor3 = Color3.fromRGB(45, 45, 58),
-                        Image            = `rbxthumb://type=AvatarHeadShot&id={player.UserId}&w=420&h=420`,
+                        Image            = headshotUrl,
                         ScaleType        = Enum.ScaleType.Crop,
 
                         [Fusion.Children] = {
@@ -228,7 +239,7 @@ return function(scope: Fusion.Scope, props)
                                         Position             = UDim2.fromScale(1, 0.5),
                                         Size                 = UDim2.fromScale(0.68, 1),
                                         BackgroundTransparency = 1,
-                                        Text                 = "First played: Jan 1, 2024",
+                                        Text                 = props.FirstPlayed,
                                         TextColor3           = Color3.fromRGB(120, 120, 140),
                                         FontFace             = Font.fromName("Montserrat", Enum.FontWeight.SemiBold),
                                         TextScaled           = true,
@@ -285,8 +296,7 @@ return function(scope: Fusion.Scope, props)
                             StatTile(3, "Astral Echoes",      props.AstralEchoesTotal, Color3.fromRGB(0,   210, 200)),
                             StatTile(4, "Rebirths",           props.Rebirths,          Color3.fromRGB(0,   153, 255)),
                             StatTile(5, "Total Rebirths",     props.RebirthsTotal,     Color3.fromRGB(0,   153, 255)),
-                            StatTile(6, "Harmony",            props.HarmonyTotal,      Color3.fromRGB(55,  210, 95)),
-                            StatTile(7, "Robux Spent",        scope:Value(0),          Color3.fromRGB(100, 220, 100)),
+                            StatTile(6, "Robux Spent",        props.RobuxSpent,        Color3.fromRGB(100, 220, 100)),
                         },
                     },
                 },

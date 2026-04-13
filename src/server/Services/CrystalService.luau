@@ -14,12 +14,17 @@ local CrystalService = Knit.CreateService {
 
 CrystalService.CrystalsChanged = Signal.new()
 CrystalService.CrystalsTotalChanged = Signal.new()
+CrystalService.CrystalCollected = Signal.new() -- (player, amount) fires on each collect
+
+local LevelService
 
 function CrystalService:KnitStart()
     self.DataService = Knit.GetService("DataService")
     self.UnlockService = Knit.GetService("UnlockService")
     self.UpgradeService = Knit.GetService("UpgradeService")
     self.MultiplierService = Knit.GetService("MultiplierService")
+
+    LevelService = Knit.GetService("LevelService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         if self.UnlockService:IsUnlocked(player, "CrystalCollection") then
@@ -87,6 +92,8 @@ function CrystalService:OnCrystalCollected(player)
     local finalValue = math.round(value * upgradeMultiplier * treeMultiplier)
 
     self:AddCrystals(player, finalValue)
+    LevelService:AddXP(player, 1)
+    self.CrystalCollected:Fire(player, finalValue)
 end
 
 function CrystalService:StartCrystals(player)

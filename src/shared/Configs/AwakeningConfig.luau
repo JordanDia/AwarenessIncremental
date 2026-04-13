@@ -37,9 +37,9 @@ return {
         },
         {
             Level       = 6,
-            Description = "Unlock the Tree Connection Zone",
+            Description = "Unlock Astral Projection",
             Cost        = 100 * 1e15, -- 100,000T
-            Reward      = { Type = "Unlock", Value = "TreeConnectionZone" },
+            Reward      = { Type = "Unlock", Value = "AstralProjection" },
         },
     },
 

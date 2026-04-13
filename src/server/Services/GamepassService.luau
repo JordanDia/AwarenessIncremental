@@ -5,6 +5,8 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local GamepassConfig = require(ReplicatedStorage.Shared.Configs.GamepassConfig)
 
+local MEDITATE_ANYWHERE_PASS_ID = 1760349159
+
 local GamepassService = Knit.CreateService {
     Name = "GamepassService",
     Client = {
@@ -13,6 +15,8 @@ local GamepassService = Knit.CreateService {
     },
 }
 
+GamepassService._meditateAnywhereOwners = {}
+
 -- Build a lookup table: PassId -> config entry
 local PASS_BY_ID = {}
 for _, pass in ipairs(GamepassConfig) do
@@ -20,6 +24,7 @@ for _, pass in ipairs(GamepassConfig) do
 end
 
 function GamepassService:KnitStart()
+    
     self.MultiplierService = Knit.GetService("MultiplierService")
     self.DataService = Knit.GetService("DataService")
 
@@ -34,6 +39,10 @@ function GamepassService:KnitStart()
         task.spawn(function()
             self:_ApplyPassesForPlayer(player)
         end)
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        self._meditateAnywhereOwners[player] = nil
     end)
 
     -- Handle purchases made while the game is running
@@ -66,7 +75,13 @@ function GamepassService:_ApplyPass(player, pass)
     if pass.Stat and pass.Value then
         self.MultiplierService:SetSource(player, pass.Stat, "Gamepass_" .. pass.PassId, pass.Value)
     end
-    -- Custom pass logic (e.g. MeditateAnywhere) would go here with an if on pass.PassId
+    if pass.PassId == MEDITATE_ANYWHERE_PASS_ID then
+        self._meditateAnywhereOwners[player] = true
+    end
+end
+
+function GamepassService:OwnsMeditateAnywhere(player)
+    return self._meditateAnywhereOwners[player] == true
 end
 
 -- Client calls this to open the purchase prompt for a pass

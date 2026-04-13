@@ -33,6 +33,7 @@ local PROFILE_TEMPLATE = {
 	XP = 0,
 	Level = 1,
 	PlaytimeSeconds = 0,
+	RobuxSpent = 0,
 
 	Upgrades = {
 
@@ -47,6 +48,11 @@ local PROFILE_TEMPLATE = {
 		CrystalMultiplier = 1,
 		CrystalAwarenessMultiplier = 1,
 		CrystalRebirthMultiplier = 1,
+
+		AstralEchoMultiplyAwareness = 1,
+		AstralEchoMultiplyRebirth = 1,
+		AstralEchoValue = 1,
+		VeilDuration = 1,
 	},
 
 	RebirthUpgrades = {
@@ -71,6 +77,22 @@ local PROFILE_TEMPLATE = {
 	},
 
 	Unlocks = {},
+
+	TutorialStage = 1, -- 1-based index into TutorialConfig.Stages; set beyond #Stages when complete
+
+	-- Badge tracking (prevents duplicate awards across sessions)
+	Badges_FirstMeditation = false,
+	Badges_FirstCrystal    = false,
+	Badges_FirstRebirth    = false,
+	Badges_FirstAwakening  = false,
+	Badges_FirstVeil       = false,
+	Badges_FirstAstralEcho = false,
+
+	DailyQuests = {
+		LastReset = 0,  -- os.time() of last reset
+		Progress  = {}, -- [questId] = number
+		Claimed   = {}, -- [questId] = true
+	},
 
 }
 
@@ -137,6 +159,12 @@ end
 
 function DataService:GetProfile(player: Player)
 	return DataService.Profiles[player] or nil
+end
+
+function DataService.Client:GetFirstSessionTime(player: Player)
+	local profile = DataService.Profiles[player]
+	if not profile then return nil end
+	return profile.FirstSessionTime
 end
 
 return DataService

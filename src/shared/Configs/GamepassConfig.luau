@@ -1,12 +1,26 @@
 -- Each entry maps a gamepass to the MultiplierService stat it affects.
 -- Stat = nil means the pass has a custom effect handled separately (e.g. MeditateAnywhere).
+-- PartName: the name of the Part inside workspace.GamepassBoards for the physical board.
 return {
+    {
+        Name        = "Meditate Anywhere",
+        Description = "Meditate and earn Awareness from anywhere on the map!",
+        PassId      = 1760349159,
+        Stat        = nil,
+        Value       = nil,
+        Icon        = "rbxassetid://84930949408431",
+        PartName    = "MeditateAnywhere",
+        Color       = Color3.fromRGB(255, 165, 50),
+    },
     {
         Name        = "2x Awareness",
         Description = "Double all Awareness earned permanently!",
         PassId      = 1760277172,
         Stat        = "Awareness",
         Value       = 2,
+        Icon        = "rbxassetid://84930949408431",
+        PartName    = "2xAwareness",
+        Color       = Color3.fromRGB(255, 200, 40),
     },
     {
         Name        = "2x Crystals",
@@ -14,6 +28,9 @@ return {
         PassId      = 1760457186,
         Stat        = "CrystalValue",
         Value       = 2,
+        Icon        = "rbxassetid://91034843326199",
+        PartName    = "2xCrystals",
+        Color       = Color3.fromRGB(140, 60, 230),
     },
     {
         Name        = "2x Astral Echoes",
@@ -21,13 +38,9 @@ return {
         PassId      = 1761369114,
         Stat        = "AstralEcho",
         Value       = 2,
-    },
-    {
-        Name        = "2x Harmony",
-        Description = "Double all Harmony earned permanently!",
-        PassId      = 1759545059,
-        Stat        = "Harmony",
-        Value       = 2,
+        Icon        = "rbxassetid://118132965740444",
+        PartName    = "2xAstralEchoes",
+        Color       = Color3.fromRGB(0, 190, 180),
     },
     {
         Name        = "2x Walk Speed",
@@ -35,12 +48,18 @@ return {
         PassId      = 1761326995,
         Stat        = "WalkSpeed",
         Value       = 2,
+        Icon        = "rbxassetid://95051590375001",
+        PartName    = "2xWalkSpeed",
+        Color       = Color3.fromRGB(230, 100, 30),
     },
     {
-        Name        = "Meditate Anywhere",
-        Description = "Meditate and earn Awareness from anywhere on the map!",
-        PassId      = 1760349159,
-        Stat        = nil, -- custom effect, handled separately
-        Value       = nil,
+        Name        = "2x XP",
+        Description = "Gain XP twice as fast!",
+        PassId      = 1772749959,
+        Stat        = "XP",
+        Value       = 2,
+        Icon        = "rbxassetid://108179584438409",
+        PartName    = "2xXP",
+        Color       = Color3.fromRGB(50, 140, 230),
     },
 }

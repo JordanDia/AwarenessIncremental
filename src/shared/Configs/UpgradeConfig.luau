@@ -199,6 +199,38 @@ return {
 
     },
 
+    AstralEchoMultiplyAwareness = {
+        Name = "Echo Awareness Multiplier",
+        Description = "Multiply awareness gained per meditation",
+        MaxLevel = 100,
+        Category = "Upgrades",
+        Currency = "AstralEchoes",
+        EffectPerLevel = function(level)
+            return level
+        end,
+        CostFunc = function(level)
+            local base = 1
+            local growth = 1.25
+            return math.floor(base * (growth ^ level))
+        end,
+    },
+
+    AstralEchoMultiplyRebirth = {
+        Name = "Echo Rebirth Multiplier",
+        Description = "Multiply rebirth amount",
+        MaxLevel = 100,
+        Category = "Upgrades",
+        Currency = "AstralEchoes",
+        EffectPerLevel = function(level)
+            return level
+        end,
+        CostFunc = function(level)
+            local base = 1
+            local growth = 1.25
+            return math.floor(base * (growth ^ level))
+        end,
+    },
+
     AstralEchoValue = {
         Name = "Echo Value",
         Description = "Increase Astral Echo value per collection",
@@ -209,8 +241,8 @@ return {
             return level
         end,
         CostFunc = function(level)
-            local base = 10
-            local growth = 1.3
+            local base = 1
+            local growth = 1.25
             return math.floor(base * (growth ^ level))
         end,
     },
@@ -218,14 +250,14 @@ return {
     VeilDuration = {
         Name = "Veil Duration",
         Description = "Increase how long the Veil lasts (+1 second per level)",
-        MaxLevel = 50,
+        MaxLevel = 15,
         Category = "Upgrades",
         Currency = "AstralEchoes",
         EffectPerLevel = function(level)
             return 15 + level  -- 15 seconds base + 1 per level
         end,
         CostFunc = function(level)
-            local base = 50
+            local base = 1
             local growth = 1.35
             return math.floor(base * (growth ^ level))
         end,

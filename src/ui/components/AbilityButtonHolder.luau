@@ -38,6 +38,7 @@ return function(scope: Fusion.Scope, props)
                     Label       = button.Label,
                     LayoutOrder = button.LayoutOrder,
                     Visible     = button.Visible,
+                    Active      = button.Active,
                     OnActivated = button.OnActivated,
                 }
             end),

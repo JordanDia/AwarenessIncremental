@@ -1,14 +1,17 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local UpgradeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeConfig)
 
 -- Upgrades that feed into MultiplierService. Maps upgradeId -> { stat, source }
 local MULTIPLIER_MAP = {
 	MultiplyAwarenessPerMeditation = { stat = "Awareness", source = "Rebirth" },
 	CrystalAwarenessMultiplier     = { stat = "Awareness", source = "Crystal" },
+	AstralEchoMultiplyAwareness    = { stat = "Awareness", source = "AstralEcho" },
 	MultiplyRebirthAmount          = { stat = "Rebirth",   source = "Rebirth" },
 	CrystalRebirthMultiplier       = { stat = "Rebirth",   source = "Crystal" },
+	AstralEchoMultiplyRebirth      = { stat = "Rebirth",   source = "AstralEcho" },
 }
 
 local UpgradeService = Knit.CreateService({
@@ -17,6 +20,8 @@ local UpgradeService = Knit.CreateService({
 		UpgradeUpdated = Knit.CreateSignal(), -- fires when level changes (for UI)
 	},
 })
+
+UpgradeService.UpgradeUpdated = Signal.new() -- (player, upgradeId, level) server-side
 
 UpgradeService.DataService = nil
 UpgradeService.AwarenessService = nil
@@ -141,6 +146,7 @@ function UpgradeService:BuyUpgrade(player, upgradeId)
 	self:_UpdateMultiplierIfNeeded(player, upgradeId, upgradeTable[upgradeId])
 
 	-- Fire events
+	self.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
 	self.Client.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
 end
 
@@ -172,7 +178,8 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 	end
 
 	-- Calculate how many levels we can buy
-	while true do
+	local MAX_LEVELS_PER_CALL = 10000 -- safety cap against infinite loops
+	while levelsToBuy < MAX_LEVELS_PER_CALL do
 		-- Check max level
 		if config.MaxLevel and currentLevel + levelsToBuy >= config.MaxLevel then
 			break
@@ -180,6 +187,11 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 
 		-- Calculate cost of next level
 		local nextLevelCost = config.CostFunc(currentLevel + levelsToBuy)
+
+		-- Guard: zero or negative cost would loop forever
+		if nextLevelCost <= 0 then
+			break
+		end
 
 		-- Check if we can afford it with remaining currency
 		if currentCurrency - totalCost < nextLevelCost then
@@ -210,6 +222,7 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 		self:_UpdateMultiplierIfNeeded(player, upgradeId, upgradeTable[upgradeId])
 
 		-- Fire event once with final level
+		self.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
 		self.Client.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
 		
 		--print(`Player {player.Name} bought {levelsToBuy} levels of {upgradeId}. Total cost: {totalCost}`)
@@ -305,10 +318,25 @@ function UpgradeService:AutoBuyUpgradeFree(player, upgradeId)
 
     upgradeTable[upgradeId] = currentLevel + 1
     self:_UpdateMultiplierIfNeeded(player, upgradeId, upgradeTable[upgradeId])
+    self.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
     self.Client.UpgradeUpdated:Fire(player, upgradeId, upgradeTable[upgradeId])
 end
 
 -- Helper to get the upgrade data table based on category
+-- Reset a single upgrade back to level 1 and fire the updated signal
+function UpgradeService:ResetUpgrade(player, upgradeId)
+    local profile = self.DataService:GetProfile(player)
+    if not profile then return end
+    local config = UpgradeConfig[upgradeId]
+    if not config then return end
+    local upgradeTable = self:_GetUpgradeDataTable(profile, config.Category)
+    if not upgradeTable then return end
+    upgradeTable[upgradeId] = 1
+    self:_UpdateMultiplierIfNeeded(player, upgradeId, 1)
+    self.UpgradeUpdated:Fire(player, upgradeId, 1)
+    self.Client.UpgradeUpdated:Fire(player, upgradeId, 1)
+end
+
 function UpgradeService:_GetUpgradeDataTable(profile, category)
     return profile.Data[category]
 end

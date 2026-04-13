@@ -152,7 +152,7 @@ return {
             },
             Title = "Upgrade: 1-14",
             UpgradeName = "Crystals multiplied by level",
-            Cost = { Amount = 500 * 1e6, Currency = "Crystals" },
+            Cost = { Amount = 200 * 1e6, Currency = "Crystals" },
         },
     },
 
@@ -164,7 +164,7 @@ return {
             Rewards     = { { Type = "Multiplier", Stat = "AstralEcho", Value = 2 } },
             Title       = "Upgrade: 2-1",
             UpgradeName = "2x Astral Echoes",
-            Cost        = { Amount = 50, Currency = "Astral Echoes" },
+            Cost        = { Amount = 1_000, Currency = "Astral Echoes" },
         },
         {
             NodeId      = "2-2",
@@ -172,7 +172,7 @@ return {
             Rewards     = { { Type = "Multiplier", Stat = "CrystalValue", Value = 3 } },
             Title       = "Upgrade: 2-2",
             UpgradeName = "3x Crystals",
-            Cost        = { Amount = 1_000, Currency = "Astral Echoes" },
+            Cost        = { Amount = 75_000, Currency = "Astral Echoes" },
         },
         {
             NodeId      = "2-3",
@@ -180,7 +180,7 @@ return {
             Rewards     = { { Type = "Dynamic", Stat = "AstralEcho", Source = "RebirthCount" } },
             Title       = "Upgrade: 2-3",
             UpgradeName = "Astral Echoes boosted by rebirths",
-            Cost        = { Amount = 5_000, Currency = "Astral Echoes" },
+            Cost        = { Amount = 150_000, Currency = "Astral Echoes" },
         },
         {
             NodeId      = "2-4",
@@ -196,7 +196,7 @@ return {
             Rewards     = { { Type = "Dynamic", Stat = "CrystalValue", Source = "Playtime" } },
             Title       = "Upgrade: 2-5",
             UpgradeName = "Crystals boosted by playtime",
-            Cost        = { Amount = 25_000, Currency = "AstralEchoes" },
+            Cost        = { Amount = 50 * 1e6, Currency = "Astral Echoes" },
         },
         {
             NodeId      = "2-6",
@@ -212,7 +212,7 @@ return {
             Rewards     = { { Type = "Multiplier", Stat = "AstralEcho", Value = 3 } },
             Title       = "Upgrade: 2-7",
             UpgradeName = "3x Astral Echoes",
-            Cost        = { Amount = 1e9, Currency = "Crystals" },
+            Cost        = { Amount = 1 * 1e9, Currency = "Crystals" },
         },
         {
             NodeId      = "2-8",
@@ -220,7 +220,7 @@ return {
             Rewards     = { { Type = "Multiplier", Stat = "AstralEcho", Value = 2 } },
             Title       = "Upgrade: 2-8",
             UpgradeName = "2x Astral Echoes",
-            Cost        = { Amount = 1e12, Currency = "Awareness" },
+            Cost        = { Amount = 50 * 1e12, Currency = "Awareness" },
         },
         {
             NodeId      = "2-9",
@@ -236,15 +236,15 @@ return {
             Rewards     = { { Type = "Dynamic", Stat = "Rebirth", Source = "CrystalCount" } },
             Title       = "Upgrade: 2-10",
             UpgradeName = "Rebirths boosted by crystals",
-            Cost        = { Amount = 500_000, Currency = "Astral Echoes" },
+            Cost        = { Amount = 250 * 1e6, Currency = "Astral Echoes" },
         },
         {
             NodeId      = "2-11",
-            Unlocks     = { "2-13" },
+            Unlocks     = {},
             Rewards     = { { Type = "Multiplier", Stat = "Rebirth", Value = 5 } },
             Title       = "Upgrade: 2-11",
             UpgradeName = "5x Rebirths",
-            Cost        = { Amount = 500 * 1e12, Currency = "Rebirths" },
+            Cost        = { Amount = 100 * 1e15, Currency = "Rebirths" },
         },
         {
             NodeId      = "2-12",
@@ -252,7 +252,7 @@ return {
             Rewards     = { { Type = "Dynamic", Stat = "Awareness", Source = "AstralEchoCount" } },
             Title       = "Upgrade: 2-12",
             UpgradeName = "Awareness boosted by Astral Echoes",
-            Cost        = { Amount = 25 * 1e12, Currency = "Awareness" },
+            Cost        = { Amount = 500 * 1e12, Currency = "Awareness" },
         },
         {
             NodeId      = "2-13",
@@ -260,7 +260,7 @@ return {
             Rewards     = { { Type = "Dynamic", Stat = "Awareness", Source = "RebirthCount" } },
             Title       = "Upgrade: 2-13",
             UpgradeName = "Awareness boosted by rebirths",
-            Cost        = { Amount = 100 * 1e12, Currency = "Awareness" },
+            Cost        = { Amount = 5 * 1e15, Currency = "Awareness" },
         },
         {
             NodeId      = "2-14",
@@ -268,7 +268,7 @@ return {
             Rewards     = { { Type = "Dynamic", Stat = "Rebirth", Source = "Level" } },
             Title       = "Upgrade: 2-14",
             UpgradeName = "Rebirth multiplied by level",
-            Cost        = { Amount = 100 * 1e6, Currency = "Astral Echoes" },
+            Cost        = { Amount = 5 * 1e9, Currency = "Astral Echoes" },
         },
     },
 

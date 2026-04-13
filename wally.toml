@@ -9,6 +9,7 @@ Signal = "sleitnick/signal@2.0.3"
 Knit = "sleitnick/knit@1.7.0"
 Fusion = "elttob/fusion@0.3.0"
 FormatNumber = "kumarion/formatnumber@0.0.1"
+TopbarPlus = "1foreverhd/topbarplus@3.4.0"
 
 [server-dependencies]
 ProfileStore = "aspecky/profilestore@0.3.0"

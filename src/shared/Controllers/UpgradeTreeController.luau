@@ -7,6 +7,13 @@ local UpgradeTreeFrame = require(ReplicatedStorage.UI.components.UpgradeTreeFram
 
 local scope = Fusion:scoped()
 
+local CURRENCY_COLORS = {
+    Awareness    = Color3.fromRGB(50,  120, 220),
+    Rebirths     = Color3.fromRGB(130, 50,  220),
+    Crystals     = Color3.fromRGB(220, 185, 30),
+    ["Astral Echoes"] = Color3.fromRGB(0,   200, 160),
+}
+
 local UpgradeTreeController = Knit.CreateController {
     Name = "UpgradeTreeController"
 }
@@ -87,6 +94,15 @@ function UpgradeTreeController:ApplyLocalPurchase(treeName, nodeId)
     self:UpdateTreeVisuals()
 end
 
+function UpgradeTreeController:_GetNodeConfig(treeName, nodeId)
+    local tree = UpgradeTreeConfig[treeName]
+    if not tree then return nil end
+    for _, nodeConfig in tree do
+        if nodeConfig.NodeId == nodeId then return nodeConfig end
+    end
+    return nil
+end
+
 function UpgradeTreeController:CreateNodeGui(treeName, touchPart, nodeConfig)
     local existing = touchPart:FindFirstChild("NodeGui")
     if existing then
@@ -133,6 +149,21 @@ function UpgradeTreeController:SetupNodeGuis()
             local touchPart = nodeModel:WaitForChild("TouchPart")
             if not touchPart then continue end
 
+            local currency = nodeConfig.Cost and nodeConfig.Cost.Currency
+            local color = currency and CURRENCY_COLORS[currency]
+            if color then
+                touchPart.Color = color
+
+                -- Color the link whose number matches this node's suffix (e.g. "2-1" -> Link1)
+                local linkNumber = nodeConfig.NodeId:match("%-(%d+)$")
+                if linkNumber then
+                    local linkPart = treeFolder:FindFirstChild("Link" .. linkNumber)
+                    if linkPart and linkPart:IsA("BasePart") then
+                        linkPart.Color = color
+                    end
+                end
+            end
+
             self:CreateNodeGui(treeName, touchPart, nodeConfig)
         end
     end
@@ -158,15 +189,15 @@ function UpgradeTreeController:UpdateNodeVisual(treeName, nodeId)
         end
     end
 
-    if isUnlocked then
-        local touchPart = nodeModel:FindFirstChild("TouchPart")
-        if touchPart then
-            local surfaceGui = touchPart:FindFirstChild("NodeGui")
-            if surfaceGui then
-                surfaceGui.Enabled = true
-            end
+    local touchPart = nodeModel:FindFirstChild("TouchPart")
+    if touchPart then
+        local surfaceGui = touchPart:FindFirstChild("NodeGui")
+        if surfaceGui then
+            surfaceGui.Enabled = isUnlocked
         end
+    end
 
+    if isUnlocked then
         local key = treeName .. "_" .. nodeId
         local costValue = self.NodeCostValues[key]
         if costValue and isPurchased then
@@ -175,6 +206,15 @@ function UpgradeTreeController:UpdateNodeVisual(treeName, nodeId)
                 costValue:set("Current: " .. FormatNumber(dynamicValue, ".##") .. "x")
             else
                 costValue:set("Purchased!")
+            end
+        elseif costValue and not isPurchased then
+            -- Reset cost text back to original after a tree reset
+            local nodeConfig = self:_GetNodeConfig(treeName, nodeId)
+            if nodeConfig and nodeConfig.Cost then
+                costValue:set(string.format("%s %s",
+                    FormatNumber(nodeConfig.Cost.Amount),
+                    nodeConfig.Cost.Currency
+                ))
             end
         end
     end

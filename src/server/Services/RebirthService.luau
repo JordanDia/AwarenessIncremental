@@ -14,7 +14,8 @@ local RebirthService = Knit.CreateService({
 	},
 })
 
-RebirthService.RebirthsChanged = Signal.new() -- (player, rebirths)
+RebirthService.RebirthsChanged = Signal.new()    -- (player, rebirths)
+RebirthService.RebirthPerformed = Signal.new()   -- (player, count) fires after a rebirth
 
 RebirthService.DataService = nil
 RebirthService.AwarenessService = nil
@@ -73,7 +74,7 @@ function RebirthService:GetTotalRebirthsToGain(player)
     local baseRebirths = self:GetRebirthsToGain(player)
     local multiplier = self.MultiplierService:GetMultiplier(player, "Rebirth")
 
-    return baseRebirths * multiplier
+    return math.floor(baseRebirths * multiplier)
 end
 -- Get the cost per rebirth
 function RebirthService:GetRebirthCost()
@@ -96,7 +97,7 @@ function RebirthService:PerformRebirth(player)
 
 	-- Check if they can rebirth
 	if not self:CanRebirth(player) then
-		warn("Player cannot rebirth:", player.Name)
+		--warn("Player cannot rebirth:", player.Name)
 		return false
 	end
 
@@ -117,6 +118,8 @@ function RebirthService:PerformRebirth(player)
 	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
 	self.Client.RebirthsTotalChanged:Fire(player, profile.Data.RebirthsTotal)
 	self.Client.RebirthsToGainUpdated:Fire(player, 0) -- Reset to 0 after rebirth
+
+	self.RebirthPerformed:Fire(player, multipliedRebirths)
 
 	print(`Player {player.Name} rebirthed! Gained {rebirthsToGain} rebirths. Total: {profile.Data.Rebirths}`)
 

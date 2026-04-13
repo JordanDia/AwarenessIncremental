@@ -1,5 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
@@ -14,6 +16,7 @@ local AbilityButton = require("../components/AbilityButton")
 local AbilityButtonHolder = require("../components/AbilityButtonHolder")
 local ProfileFrame = require("../components/ProfileFrame")
 local ShopFrame = require("../components/ShopFrame")
+local DailyQuestsFrame = require("../components/DailyQuestsFrame")
 
 return function(parent)
     local scope = scoped(Fusion, {
@@ -26,13 +29,20 @@ return function(parent)
         AbilityButtonHolder = AbilityButtonHolder,
         ProfileFrame = ProfileFrame,
         ShopFrame = ShopFrame,
+        DailyQuestsFrame = DailyQuestsFrame,
     })
+
 
     local isProfileOpen = false
     local isProfileVisible = scope:Value(false)
 
     local isShopOpen = false
     local isShopVisible = scope:Value(false)
+
+    local isQuestsOpen = false
+    local isQuestsVisible = scope:Value(false)
+
+    local QuestService = Knit.GetService("QuestService")
     
     local DataService = Knit.GetService("DataService")
     local AwarenessService = Knit.GetService("AwarenessService")
@@ -41,6 +51,7 @@ return function(parent)
     local AstralEchoService = Knit.GetService("AstralEchoService")
     local HarmonyService = Knit.GetService("HarmonyService")
     local LevelService = Knit.GetService("LevelService")
+    local DonateService = Knit.GetService("DonateService")
     local GamepassService = Knit.GetService("GamepassService")
 
     local awarenessValue = scope:Value(AwarenessService:GetAwareness())
@@ -54,7 +65,8 @@ return function(parent)
     local rebirthsTotalValue = scope:Value(0)
     local crystalsTotalValue = scope:Value(0)
     local echoesTotalValue = scope:Value(0)
-    local harmonyTotalValue = scope:Value(0)
+    local robuxSpentValue = scope:Value(0)
+    local firstPlayedValue = scope:Value("...")
 
     DataService.DataLoaded:Connect(function(data)
         awarenessValue:set(data.Awareness)
@@ -66,7 +78,11 @@ return function(parent)
         rebirthsTotalValue:set(data.RebirthsTotal or 0)
         crystalsTotalValue:set(data.CrystalsTotal or 0)
         echoesTotalValue:set(data.AstralEchoesTotal or 0)
-        harmonyTotalValue:set(data.HarmonyTotal or 0)
+        robuxSpentValue:set(data.RobuxSpent or 0)
+    end)
+
+    DonateService.RobuxSpentAdded:Connect(function(amount)
+        robuxSpentValue:set(Fusion.peek(robuxSpentValue) + amount)
     end)
 
     AwarenessService.AwarenessChanged:Connect(function(newAwareness)
@@ -107,8 +123,16 @@ return function(parent)
         harmonyValue:set(harmony)
     end)
 
-    HarmonyService.HarmonyTotalChanged:Connect(function(total)
-        harmonyTotalValue:set(total)
+    -- Fetch first session time and format as readable date
+    task.spawn(function()
+        local MONTHS = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"}
+        local t = DataService:GetFirstSessionTime()
+        if t then
+            local dt = os.date("*t", t)
+            firstPlayedValue:set(string.format("First played: %s %d, %d", MONTHS[dt.month], dt.day, dt.year))
+        else
+            firstPlayedValue:set("")
+        end
     end)
 
     -- Level System
@@ -122,11 +146,11 @@ return function(parent)
     -- Function to update level UI
     local function UpdateLevelUI()
         local level = LevelService:GetLevel()
-        local currentXP, neededXP = LevelService:GetXPProgress()
-        
+        local xp = LevelService:GetXPProgress()
+
         levelValue:set(level)
-        currentXPValue:set(currentXP)
-        neededXPValue:set(neededXP)
+        currentXPValue:set(xp.current)
+        neededXPValue:set(xp.needed)
     end
 
     -- Initial update
@@ -179,14 +203,14 @@ return function(parent)
             Visible = scope:Value(true),
         },
 
-        {
-            Name = "HarmonyFrame",
-            Value = harmonyValue,
-            Icon = "rbxassetid://70601939887941", -- TODO: replace with a Harmony icon
-            TextColor3 = Color3.fromRGB(55, 210, 95),
-            LayoutOrder = 60,
-            Visible = scope:Value(true),
-        },
+        -- {
+        --     Name = "HarmonyFrame",
+        --     Value = harmonyValue,
+        --     Icon = "rbxassetid://70601939887941", -- TODO: replace with a Harmony icon
+        --     TextColor3 = Color3.fromRGB(55, 210, 95),
+        --     LayoutOrder = 60,
+        --     Visible = scope:Value(true),
+        -- },
 
     }
 
@@ -203,20 +227,23 @@ return function(parent)
             end,
         },
         {
-            Name = "Inventory",
-            Icon = "rbxassetid://112883503105803",
+            Name = "DailyQuests",
+            Icon = "rbxassetid://124847421234505",
             LayoutOrder = 2,
             Visible = true,
-            OnActivated = function() print("Rebirth opened") end,
+            OnActivated = function()
+                isQuestsOpen = not isQuestsOpen
+                isQuestsVisible:set(isQuestsOpen)
+            end,
         },
 
-        {
-            Name = "Spin Wheel",
-            Icon = "rbxassetid://126776054809349",
-            LayoutOrder = 3,
-            Visible = true,
-            OnActivated = function() print("Spin wheel opened") end,
-        },
+        -- {
+        --     Name = "Spin Wheel",
+        --     Icon = "rbxassetid://126776054809349",
+        --     LayoutOrder = 3,
+        --     Visible = true,
+        --     OnActivated = function() print("Spin wheel opened") end,
+        -- },
 
         {
             Name = "Profile",
@@ -231,34 +258,89 @@ return function(parent)
 
     }
 
+    local meditateAnywhereActive = scope:Value(false)
+    local MEDITATE_ANYWHERE_PASS_ID = 1760349159
+
+    local AUTO_COLLECT_GROUP_ID = 307417534
+    local AUTO_COLLECT_RADIUS   = 25 -- studs from CrystalSpawn
+
+    local ZoneController    = Knit.GetController("ZoneController")
+    local CrystalController = Knit.GetController("CrystalController")
+
+    local autoCollectVisible = scope:Value(false)
+    local autoCollectActive  = scope:Value(false)
+
+    -- Cache group membership so we only check once (IsInGroup yields)
+    local isInAutoCollectGroup = false
+    task.spawn(function()
+        local ok, result = pcall(function()
+            return Players.LocalPlayer:IsInGroup(AUTO_COLLECT_GROUP_ID)
+        end)
+        isInAutoCollectGroup = ok and result
+    end)
+
+    -- Proximity check for CrystalSpawn visibility
+    local crystalSpawn = workspace:WaitForChild("CrystalSpawn")
+    local crystalSpawnPos = crystalSpawn.Position
+
+    local elapsed = 0
+    RunService.Heartbeat:Connect(function(dt)
+        elapsed += dt
+        if elapsed < 0.2 then return end
+        elapsed = 0
+
+        local character = Players.LocalPlayer.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        local inRange = root and (root.Position - crystalSpawnPos).Magnitude <= AUTO_COLLECT_RADIUS
+
+        if not inRange and Fusion.peek(autoCollectActive) then
+            -- Left the zone while active — turn it off
+            autoCollectActive:set(false)
+            CrystalController:StopAutoCollect()
+        end
+
+        autoCollectVisible:set(inRange and true or false)
+    end)
+
     local abilityButtons = scope:Value {
         {
-            Name = "PrayAnywhere",
-            Label = "Pray Anywhere",
+            Name = "MeditateAnywhere",
+            Label = "Meditate Anywhere",
             LayoutOrder = 1,
             Visible = true,
+            Active = meditateAnywhereActive,
             OnActivated = function()
-                -- PrayService:PrayAnywhere() or similar
-                print("Pray Anywhere activated")
+                local success, active = AwarenessService:ToggleMeditateAnywhere()
+                if success then
+                    meditateAnywhereActive:set(active)
+                    ZoneController:SetMeditateAnywhereOverride(active)
+                else
+                    GamepassService:PromptPurchase(MEDITATE_ANYWHERE_PASS_ID)
+                end
             end,
         },
         {
-            Name = "AutoDrain",
-            Label = "Auto Drain",
+            Name = "AutoCollect",
+            Label = "Auto Collect",
             LayoutOrder = 2,
-            Visible = true,
+            Visible = autoCollectVisible,
+            Active = autoCollectActive,
             OnActivated = function()
-                print("Auto Drain activated")
-            end,
-        },
-        {
-            Name = "SeeThroughWorld",
-            Label = "See Through World",
-            LayoutOrder = 3,
-            Visible = true,
-            OnActivated = function()
-                -- AstralEchoController:ActivateSeeThroughWorld()
-                print("See Through World activated")
+                if not isInAutoCollectGroup then
+                    StarterGui:SetCore("SendNotification", {
+                        Title = "Group Required",
+                        Text = "Join group " .. AUTO_COLLECT_GROUP_ID .. " to use Auto Collect!",
+                        Duration = 5,
+                    })
+                    return
+                end
+                local active = not Fusion.peek(autoCollectActive)
+                autoCollectActive:set(active)
+                if active then
+                    CrystalController:StartAutoCollect()
+                else
+                    CrystalController:StopAutoCollect()
+                end
             end,
         },
     }
@@ -297,6 +379,15 @@ return function(parent)
                 end,
             },
 
+            scope:DailyQuestsFrame {
+                Visible = isQuestsVisible,
+                QuestService = QuestService,
+                OnClose = function()
+                    isQuestsOpen = false
+                    isQuestsVisible:set(false)
+                end,
+            },
+
             scope:ProfileFrame {
                 Visible = isProfileVisible,
                 OnClose = function()
@@ -309,12 +400,13 @@ return function(parent)
                 RebirthsTotal = rebirthsTotalValue,
                 CrystalsTotal = crystalsTotalValue,
                 AstralEchoesTotal = echoesTotalValue,
-                HarmonyTotal = harmonyTotalValue,
+                RobuxSpent = robuxSpentValue,
+                FirstPlayed = firstPlayedValue,
             },
 
         }
 
-       
+
     }
 
     return screenGui

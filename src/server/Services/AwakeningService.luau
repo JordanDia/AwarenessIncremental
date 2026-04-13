@@ -12,12 +12,18 @@ local AUTO_BUY_UPGRADES = {
     "MultiplyAwarenessPerMeditation",
     "MultiplyRebirthAmount",
     "IncreaseDeepThoughtChance",
-    "CrystalValue",
-    "CrystalSpeed",
-    "MaxCrystals",
-    "CrystalMultiplier",
-    "CrystalAwarenessMultiplier",
-    "CrystalRebirthMultiplier",
+}
+
+-- Upgrades that are only auto-bought when the given unlock is active
+local AUTO_BUY_GATED = {
+    { unlock = "CrystalCollection", upgrades = {
+        "CrystalValue",
+        "CrystalSpeed",
+        "MaxCrystals",
+        "CrystalMultiplier",
+        "CrystalAwarenessMultiplier",
+        "CrystalRebirthMultiplier",
+    }},
 }
 
 local AwakeningService = Knit.CreateService {
@@ -44,15 +50,22 @@ function AwakeningService:KnitStart()
     self.MultiplierService  = Knit.GetService("MultiplierService")
     self.UpgradeService     = Knit.GetService("UpgradeService")
     self.UnlockService      = Knit.GetService("UnlockService")
+    self.UpgradeTreeService = Knit.GetService("UpgradeTreeService")
 
-    self.DataService.ProfileLoaded:Connect(function(player)
+    local function onProfileLoaded(player)
         self.PlayerAlive[player] = true
         self:RestoreRewards(player)
-    end)
+        -- UnlockService:Unlock returns early if already flagged, so explicitly re-unlock
+        -- Tree2's root node here to ensure it's visible after any awakening + rejoin.
+        if self:GetLevel(player) >= 1 then
+            self.UpgradeTreeService:UnlockTreeRoot(player, "Tree2")
+        end
+    end
+
+    self.DataService.ProfileLoaded:Connect(onProfileLoaded)
 
     for player in self.DataService.Profiles do
-        self.PlayerAlive[player] = true
-        self:RestoreRewards(player)
+        onProfileLoaded(player)
     end
 
     Players.PlayerRemoving:Connect(function(player)
@@ -78,13 +91,17 @@ end
 function AwakeningService:GetNextCost(player)
     local level = self:GetLevel(player)
     if level >= AwakeningConfig.MaxLevel then return math.huge end
-    return AwakeningConfig.Levels[level + 1].Cost
+    local entry = AwakeningConfig.Levels[level + 1]
+    if not entry then return math.huge end
+    return entry.Cost
 end
 
 function AwakeningService:CanAwaken(player)
     local level = self:GetLevel(player)
     if level >= AwakeningConfig.MaxLevel then return false end
-    return self.AwarenessService:GetAwareness(player) >= self:GetNextCost(player)
+    local cost = self:GetNextCost(player)
+    if cost == math.huge then return false end
+    return self.AwarenessService:GetAwareness(player) >= cost
 end
 
 -- Prestige-reset Awareness / Rebirths / Crystals / AstralEchoes, advance level, grant reward.
@@ -100,6 +117,42 @@ function AwakeningService:Awaken(player)
     self.CrystalService:ResetCrystals(player)
     self.AstralEchoService:ResetEchoes(player)
 
+    -- Reset upgrade boards back to level 1
+    local upgradeResets = {
+        -- Awareness
+        "AwarenessPerMeditation",
+        "MeditationSpeed",
+        -- Rebirths
+        "MultiplyAwarenessPerMeditation",
+        "MultiplyRebirthAmount",
+        "IncreaseDeepThoughtChance",
+        -- Crystals
+        "CrystalValue",
+        "CrystalSpeed",
+        "MaxCrystals",
+        "CrystalMultiplier",
+        "CrystalAwarenessMultiplier",
+        "CrystalRebirthMultiplier",
+        -- Astral Echoes / Veil
+        "AstralEchoValue",
+        "VeilDuration",
+        "AstralEchoMultiplyAwareness",
+        "AstralEchoMultiplyRebirth",
+    }
+    for _, upgradeId in upgradeResets do
+        self.UpgradeService:ResetUpgrade(player, upgradeId)
+    end
+
+    -- Reset both upgrade trees so the player must re-buy them
+    self.UpgradeTreeService:ResetTree(player, "Tree1")
+    self.UpgradeTreeService:ResetTree(player, "Tree2")
+
+    -- Re-unlock Tree1's root (always available) since ResetTree wiped it
+    self.UpgradeTreeService:UnlockTreeRoot(player, "Tree1")
+
+    -- Revoke unlocks granted by tree nodes (player must re-earn them)
+    self.UnlockService:Revoke(player, "CrystalCollection")
+
     -- Advance level
     profile.Data.AwakeningLevel = (profile.Data.AwakeningLevel or 0) + 1
     local newLevel = profile.Data.AwakeningLevel
@@ -108,6 +161,12 @@ function AwakeningService:Awaken(player)
     local levelConfig = AwakeningConfig.Levels[newLevel]
     if levelConfig then
         self:_GrantReward(player, newLevel, levelConfig.Reward)
+    end
+
+    -- For awakenings level 2+, the level-1 reward already permanently gave Tree2.
+    -- Re-unlock its root since ResetTree just wiped it.
+    if newLevel >= 2 then
+        self.UpgradeTreeService:UnlockTreeRoot(player, "Tree2")
     end
 
     self.AwakeningLevelChanged:Fire(player, newLevel)
@@ -188,6 +247,13 @@ function AwakeningService:_StartAutoBuy(player)
         while self.PlayerAlive[player] do
             for _, upgradeId in AUTO_BUY_UPGRADES do
                 self.UpgradeService:AutoBuyUpgradeFree(player, upgradeId)
+            end
+            for _, gate in AUTO_BUY_GATED do
+                if self.UnlockService:IsUnlocked(player, gate.unlock) then
+                    for _, upgradeId in gate.upgrades do
+                        self.UpgradeService:AutoBuyUpgradeFree(player, upgradeId)
+                    end
+                end
             end
             task.wait(1)
         end

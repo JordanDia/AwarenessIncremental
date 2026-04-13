@@ -22,13 +22,16 @@ function VeilService:KnitStart()
     self.UnlockService     = Knit.GetService("UnlockService")
     self.AstralEchoService = Knit.GetService("AstralEchoService")
     self.UpgradeService    = Knit.GetService("UpgradeService")
+    self.AwakeningService  = Knit.GetService("AwakeningService")
 
     -- Hook up the mushroom prompt — enter-only, no toggle
-    local mushroom = workspace:WaitForChild("Mushroom")
+    local mushroom = workspace:WaitForChild("MysticalForest"):WaitForChild("Mushroom")
     local prompt = mushroom:FindFirstChildWhichIsA("ProximityPrompt", true)
 
     if prompt then
         prompt.Triggered:Connect(function(player)
+            -- Require at least Awakening Level 1
+            if self.AwakeningService:GetLevel(player) < 1 then return end
             -- Ignore if already inside or on cooldown
             if self:IsVeilLifted(player) then return end
             if self:IsOnCooldown(player) then return end

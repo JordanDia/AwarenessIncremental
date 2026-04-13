@@ -18,6 +18,8 @@ return function(
         Cost: Fusion.UsedAs<number>?,
         Units: string?,
 
+        CanAfford: Fusion.UsedAs<boolean>?,
+
         OnBuyOne: (() -> ())?,
         OnBuyMax: (() -> ())?,
     }
@@ -162,6 +164,11 @@ return function(
                 BackgroundTransparency = 1,
 
                 Text = scope:Computed(function(use)
+                    local level = props.Level and use(props.Level) or 0
+                    local maxLevel = props.MaxLevel or 0
+                    if level >= maxLevel then
+                        return `Cost: <font color="rgb(255, 200, 80)">Maxed!</font>`
+                    end
                     local cost = props.Cost and use(props.Cost) or 0
                     return `Cost: <font color="rgb(150, 255, 150)">{FormatNumber(cost, ".##")} {props.Units or ""}</font>`
                 end),
@@ -201,6 +208,9 @@ return function(
                         Size = UDim2.fromScale(0.4, 1),
                         Text = "",
                         BackgroundColor3 = Color3.fromRGB(80, 200, 120),
+                        BackgroundTransparency = scope:Computed(function(use)
+                            return (props.CanAfford and use(props.CanAfford)) and 0 or 1
+                        end),
                         TextColor3 = Color3.new(1, 1, 1),
                         BorderSizePixel = 0,
 
@@ -261,6 +271,9 @@ return function(
                         Size = UDim2.fromScale(0.4, 1),
                         Text = "",
                         BackgroundColor3 = Color3.fromRGB(70, 140, 255),
+                        BackgroundTransparency = scope:Computed(function(use)
+                            return (props.CanAfford and use(props.CanAfford)) and 0 or 1
+                        end),
                         TextColor3 = Color3.new(1, 1, 1),
                         BorderSizePixel = 0,
 

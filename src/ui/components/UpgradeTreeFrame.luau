@@ -21,7 +21,6 @@ return function(
 
         [Fusion.Children] = {
 
-
             scope:New "TextLabel" {
                 Name = "Title",
                 Size = UDim2.fromScale(1, 0.3),
@@ -34,7 +33,7 @@ return function(
 
                 [Fusion.Children] = {
                     scope:New "UIStroke" {
-                        Thickness = 1,
+                        Thickness = 2,
                     }
                 }
 
@@ -52,7 +51,7 @@ return function(
 
                 [Fusion.Children] = {
                     scope:New "UIStroke" {
-                        Thickness = 1,
+                        Thickness = 2,
                     }
                 }
 
@@ -70,7 +69,7 @@ return function(
 
                 [Fusion.Children] = {
                     scope:New "UIStroke" {
-                        Thickness = 1,
+                        Thickness = 2,
                     }
                 }
 

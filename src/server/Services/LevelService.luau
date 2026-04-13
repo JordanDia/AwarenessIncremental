@@ -1,5 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local DataService = require("./DataService")
+local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -23,15 +23,26 @@ local LevelConfig = {
 
 function LevelService:KnitStart()
     self.DataService = Knit.GetService("DataService")
+    self.MultiplierService = Knit.GetService("MultiplierService")
     
     -- Listen for new players
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         self:SetupPlayer(player, profile)
     end)
 
-    for player, profile in DataService.Profiles do
+    for player, profile in self.DataService.Profiles do
         self:SetupPlayer(player, profile)
     end
+
+    -- Give all players 1 XP per second
+    task.spawn(function()
+        while true do
+            for _, player in Players:GetPlayers() do
+                self:AddXP(player, 1)
+            end
+            task.wait(1)
+        end
+    end)
 
 end
 
@@ -103,7 +114,7 @@ end
 function LevelService:GetXPProgress(player)
     local profile = self.DataService:GetProfile(player)
     if not profile then
-        return 0, 0
+        return { current = 0, needed = 0 }
     end
     
     local currentXP = profile.Data.XP
@@ -111,25 +122,29 @@ function LevelService:GetXPProgress(player)
     
     -- Check if at max level
     if LevelConfig.MaxLevel and currentLevel >= LevelConfig.MaxLevel then
-        return 0, 0 -- Max level reached
+        return { current = 0, needed = 0 }
     end
-    
+
     local xpForCurrentLevel = self:GetTotalXPForLevel(currentLevel)
     local xpForNextLevel = self:GetTotalXPForLevel(currentLevel + 1)
-    
+
     local xpIntoLevel = currentXP - xpForCurrentLevel
     local xpNeededForLevel = xpForNextLevel - xpForCurrentLevel
-    
-    return xpIntoLevel, xpNeededForLevel
+
+    return { current = xpIntoLevel, needed = xpNeededForLevel }
 end
 
 -- Add XP to a player (with automatic level-up checking)
 function LevelService:AddXP(player, amount)
     local profile = self.DataService:GetProfile(player)
     if not profile then return end
-    
+
+    -- Apply XP multiplier (e.g. from gamepasses)
+    local multiplier = self.MultiplierService:GetMultiplier(player, "XP")
+    local final = amount * multiplier
+
     -- Add XP
-    profile.Data.XP += amount
+    profile.Data.XP += final
     
     -- Check for level ups (can level up multiple times at once)
     local oldLevel = profile.Data.Level
