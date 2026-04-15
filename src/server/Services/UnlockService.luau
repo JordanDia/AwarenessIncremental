@@ -21,7 +21,6 @@ function UnlockService:Unlock(player, unlockId)
     if profile.Data.Unlocks[unlockId] then return false end -- already unlocked
 
     profile.Data.Unlocks[unlockId] = true
-    print(`Player {player.Name} unlocked: {unlockId}`)
 
 
     if unlockId == "CrystalCollection" then

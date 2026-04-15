@@ -4,7 +4,7 @@ local FormatNumber = require(ReplicatedStorage.Packages.FormatNumber).Simple.For
 
 return function(scope, props)
     return scope:New "BillboardGui" {
-        Size = UDim2.fromScale(1, 0.8),
+        Size = UDim2.fromScale(3, 2),
         StudsOffset = Vector3.new(0, 2, 0),
         AlwaysOnTop = true,
         Adornee = props.Adornee,

@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local FormatNumber = require(ReplicatedStorage.Packages.FormatNumber).Simple.FormatCompact
 
 local LeaderstatService = Knit.CreateService { Name = "LeaderstatService" }
 
@@ -13,9 +14,9 @@ local function createLeaderstats(player)
     level.Value = 0
     level.Parent = leaderstats
 
-    local awareness = Instance.new("NumberValue")
+    local awareness = Instance.new("StringValue")
     awareness.Name = "Awareness"
-    awareness.Value = 0
+    awareness.Value = "0"
     awareness.Parent = leaderstats
 
     return leaderstats
@@ -35,13 +36,13 @@ function LeaderstatService:KnitStart()
         local profile = DataService:GetProfile(player)
         if profile then
             levelStat.Value    = profile.Data.Level or 1
-            awarenessStat.Value = profile.Data.Awareness or 0
+            awarenessStat.Value = FormatNumber(profile.Data.Awareness or 0)
         end
 
         -- Keep in sync with live changes
         AwarenessService.AwarenessChanged:Connect(function(p, newAwareness)
             if p ~= player then return end
-            awarenessStat.Value = math.floor(newAwareness)
+            awarenessStat.Value = FormatNumber(newAwareness)
         end)
 
         LevelService.LevelChanged:Connect(function(p, newLevel)

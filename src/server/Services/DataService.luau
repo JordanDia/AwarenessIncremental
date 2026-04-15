@@ -136,8 +136,6 @@ function DataService:LoadPlayer(player: Player)
 			DataService.Profiles[player] = profile
 			DataService.ProfileLoaded:Fire(player, profile)
 
-			print(profile)
-			print(`Profile loaded for player {player.Name} ({player.UserId})`)
 		else
 			-- The player has left before the profile session started
 			profile:EndSession()
@@ -151,8 +149,6 @@ end
 function DataService:PlayerRemoving(player: Player)
 	local profile = DataService.Profiles[player]
 	if profile ~= nil then
-		print(profile.Data)
-		--profile.Data = {}
 		profile:EndSession()
 	end
 end

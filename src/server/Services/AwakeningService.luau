@@ -171,7 +171,6 @@ function AwakeningService:Awaken(player)
 
     self.AwakeningLevelChanged:Fire(player, newLevel)
 
-    print(`{player.Name} awakened to level {newLevel}`)
     return true
 end
 

@@ -10,8 +10,7 @@ function FallService:KnitStart()
     local function getSpawnCFrame()
         local spawn = workspace:FindFirstChild("Map"):FindFirstChildWhichIsA("SpawnLocation")
         if spawn then
-            print(`[FallService] Teleporting player to spawn at {spawn.Position}`)
-            return CFrame.new(spawn.Position + Vector3.new(0, 3, 0))
+return CFrame.new(spawn.Position + Vector3.new(0, 3, 0))
         end
         return CFrame.new(0, 3, 0)
     end

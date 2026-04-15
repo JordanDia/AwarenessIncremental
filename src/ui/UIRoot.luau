@@ -12,20 +12,31 @@ local DonateBoard = require("./mount/DonateBoard")
 return function(parent: Instance)
     local mounted = {}
 
-    mounted.Hud = Hud(parent)
-    mounted.UpgradeBoards = UpgradeBoards(parent)
-    mounted.MushroomGui = MushroomGui(parent)
-    mounted.TutorialGui = TutorialGui(parent)
-    mounted.TutorialIndicator = TutorialIndicator(parent)
-    mounted.GamepassBoards = GamepassBoards(parent)
-    mounted.SocialBoard = SocialBoard(parent)
-    mounted.GamepassOverviewBoard = GamepassOverviewBoard(parent)
-    mounted.LeaderboardBoards = LeaderboardBoards(parent)
-    mounted.DonateBoard = DonateBoard(parent)
-    
+    local mountFns = {
+        Hud                   = Hud,
+        UpgradeBoards         = UpgradeBoards,
+        MushroomGui           = MushroomGui,
+        TutorialGui           = TutorialGui,
+        TutorialIndicator     = TutorialIndicator,
+        GamepassBoards        = GamepassBoards,
+        SocialBoard           = SocialBoard,
+        GamepassOverviewBoard = GamepassOverviewBoard,
+        LeaderboardBoards     = LeaderboardBoards,
+        DonateBoard           = DonateBoard,
+    }
+
+    -- Mount all UIs in parallel so WaitForChild calls don't block each other
+    for name, fn in mountFns do
+        task.spawn(function()
+            mounted[name] = fn(parent)
+        end)
+    end
+
     return function()
         for _, gui in pairs(mounted) do
-            if gui.Destroy then
+            if type(gui) == "function" then
+                gui()
+            elseif gui and gui.Destroy then
                 gui:Destroy()
             end
         end

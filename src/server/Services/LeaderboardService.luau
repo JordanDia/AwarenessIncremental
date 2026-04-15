@@ -5,20 +5,20 @@ local Players           = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 -- OrderedDataStore names
-local STORE_AWARENESS = "LB_Awareness"
-local STORE_REBIRTHS  = "LB_Rebirths"
-local STORE_CRYSTALS  = "LB_Crystals"
-local STORE_ECHOES    = "LB_AstralEchoes"
+local STORE_AWARENESS = "LB_Awareness_v2"
+local STORE_REBIRTHS  = "LB_Rebirths_v2"
+local STORE_CRYSTALS  = "LB_Crystals_v2"
+local STORE_ECHOES    = "LB_AstralEchoes_v2"
 local STORE_ROBUX     = "LB_RobuxSpent"
 local STORE_PLAYTIME  = "LB_Playtime"
 
 local CATEGORIES = {
-    { id = "TopAwareness",    label = "Top Awareness",     storeId = STORE_AWARENESS, dataKey = "AwarenessTotal" },
-    { id = "TopRebirths",     label = "Top Rebirths",      storeId = STORE_REBIRTHS,  dataKey = "RebirthsTotal" },
-    { id = "TopCrystals",     label = "Top Crystals",      storeId = STORE_CRYSTALS,  dataKey = "CrystalsTotal" },
-    { id = "TopAstralEchoes", label = "Top Astral Echoes", storeId = STORE_ECHOES,    dataKey = "AstralEchoesTotal" },
-    { id = "TopRobuxSpent",   label = "Top Robux Spent",   storeId = STORE_ROBUX,     dataKey = "RobuxSpent" },
-    { id = "TopTimePlayed",   label = "Top Time Played",   storeId = STORE_PLAYTIME,  dataKey = "PlaytimeSeconds" },
+    { id = "TopAwareness",    label = "Top Awareness",     storeId = STORE_AWARENESS, dataKey = "AwarenessTotal",    wholeNumber = true  },
+    { id = "TopRebirths",     label = "Top Rebirths",      storeId = STORE_REBIRTHS,  dataKey = "RebirthsTotal",     wholeNumber = true  },
+    { id = "TopCrystals",     label = "Top Crystals",      storeId = STORE_CRYSTALS,  dataKey = "CrystalsTotal",     wholeNumber = true  },
+    { id = "TopAstralEchoes", label = "Top Astral Echoes", storeId = STORE_ECHOES,    dataKey = "AstralEchoesTotal", wholeNumber = true  },
+    { id = "TopRobuxSpent",   label = "Top Robux Spent",   storeId = STORE_ROBUX,     dataKey = "RobuxSpent",       rawValue = true },
+    { id = "TopTimePlayed",   label = "Top Time Played",   storeId = STORE_PLAYTIME,  dataKey = "PlaytimeSeconds",  rawValue = true },
 }
 
 local BLOCKED_USER_IDS = { [33124593] = true }
@@ -29,6 +29,14 @@ local function getUserName(userId)
     if usernameCache[userId] then
         return usernameCache[userId]
     end
+    -- Resolve instantly if the player is currently in the server
+    for _, player in Players:GetPlayers() do
+        if player.UserId == userId then
+            usernameCache[userId] = player.Name
+            return player.Name
+        end
+    end
+    -- Fall back to API with exponential backoff
     for attempt = 1, 5 do
         local ok, name = pcall(function()
             return Players:GetNameFromUserIdAsync(userId)
@@ -58,23 +66,36 @@ for _, category in ipairs(CATEGORIES) do
     LeaderboardService._cache[category.id]  = {}
 end
 
+local LOG_BASE = 1.0000001
+
+local function encodeValue(value)
+    if value <= 0 then return 0 end
+    if value ~= value or value == math.huge then return 0 end -- NaN or inf guard
+    return math.floor(math.log(value) / math.log(LOG_BASE))
+end
+
+local function decodeValue(stored)
+    if stored == 0 then return 0 end
+    local result = LOG_BASE ^ stored
+    if result ~= result or result == math.huge then return nil end -- NaN or inf → exclude
+    return result
+end
+
 function LeaderboardService:_UpdatePlayerStats(player)
     local profile = self.DataService:GetProfile(player)
     if not profile then return end
 
-    local MAX_INT = 2^53 - 1
-
     for _, category in ipairs(CATEGORIES) do
         local raw = profile.Data[category.dataKey]
         if raw == nil then continue end
-        local value = math.min(math.floor(raw), MAX_INT)
-        if value < 0 then
-            value = 0
-        end
         local store = self._stores[category.id]
-        pcall(function()
-            store:SetAsync(tostring(player.UserId), value)
+        local encoded = category.rawValue and math.floor(raw) or encodeValue(raw)
+        local ok, err = pcall(function()
+            store:SetAsync(tostring(player.UserId), encoded)
         end)
+        if not ok then
+            warn("[LeaderboardService] SetAsync failed for", category.id, ":", err)
+        end
     end
 end
 
@@ -83,12 +104,18 @@ function LeaderboardService:_RefreshCategory(category)
     local ok, pages = pcall(function()
         return store:GetSortedAsync(false, 100)
     end)
-    if not ok or not pages then return end
+    if not ok or not pages then
+        warn("[LeaderboardService] GetSortedAsync failed for", category.id, ":", pages)
+        return
+    end
 
     local pageOk, pageData = pcall(function()
         return pages:GetCurrentPage()
     end)
-    if not pageOk then return end
+    if not pageOk then
+        warn("[LeaderboardService] GetCurrentPage failed for", category.id, ":", pageData)
+        return
+    end
 
     -- Filter valid entries first
     local valid = {}
@@ -97,7 +124,9 @@ function LeaderboardService:_RefreshCategory(category)
         if not userId or userId <= 0 then continue end
         if BLOCKED_USER_IDS[userId] then continue end
         if entry.value <= 0 then continue end
-        table.insert(valid, { userId = userId, value = entry.value })
+        local decoded = category.rawValue and entry.value or decodeValue(entry.value)
+        if not decoded then continue end
+        table.insert(valid, { userId = userId, value = decoded })
     end
 
     -- Resolve all usernames in parallel
@@ -118,7 +147,9 @@ function LeaderboardService:_RefreshCategory(category)
             end
         end)
     end
-    done.Event:Wait()
+    if pending > 0 then
+        done.Event:Wait()
+    end
     done:Destroy()
 
     local entries = {}
@@ -126,32 +157,24 @@ function LeaderboardService:_RefreshCategory(category)
     for i, item in ipairs(valid) do
         if not names[i] then continue end -- skip if name resolution failed
         rank += 1
+        local displayValue = category.wholeNumber and math.round(item.value) or item.value
         table.insert(entries, {
             rank  = rank,
             name  = names[i],
-            value = item.value,
+            value = displayValue,
         })
     end
     self._cache[category.id] = entries
 end
 
 function LeaderboardService:_RefreshAllLeaderboards()
-    -- Refresh all categories in parallel
-    local pending = #CATEGORIES
-    local done = Instance.new("BindableEvent")
+    -- Refresh all categories in parallel; notify client as each one completes
     for _, category in ipairs(CATEGORIES) do
         task.spawn(function()
             self:_RefreshCategory(category)
-            pending -= 1
-            if pending == 0 then
-                done:Fire()
-            end
+            self.Client.LeaderboardRefreshed:FireAll(category.id)
         end)
     end
-    done.Event:Wait()
-    done:Destroy()
-
-    self.Client.LeaderboardRefreshed:FireAll()
 end
 
 function LeaderboardService:KnitStart()
@@ -162,12 +185,8 @@ function LeaderboardService:KnitStart()
     self.DonateService.HasRobuxSpentAdded:Connect(function(player, _amount)
         local profile = self.DataService:GetProfile(player)
         if not profile then return end
-        local value = math.min(math.floor(profile.Data.RobuxSpent or 0), 2^53 - 1)
-        if value < 0 then
-            value = 0
-        end
         pcall(function()
-            self._stores["TopRobuxSpent"]:SetAsync(tostring(player.UserId), value)
+            self._stores["TopRobuxSpent"]:SetAsync(tostring(player.UserId), math.floor(profile.Data.RobuxSpent or 0))
         end)
     end)
 

@@ -157,7 +157,6 @@ function LevelService:AddXP(player, amount)
         for level = oldLevel + 1, newLevel do
             self.Client.LevelChanged:Fire(player, level, level - 1)
             self.LevelChanged:Fire(player, level, level - 1)
-            print(`Player {player.Name} leveled up! Level {level - 1} -> {level}`)
         end
     end
     

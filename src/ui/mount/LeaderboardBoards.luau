@@ -185,9 +185,11 @@ return function(parent)
 
         task.spawn(fetchData)
 
-        -- Re-fetch whenever the server finishes a refresh cycle
-        LeaderboardService.LeaderboardRefreshed:Connect(function()
-            fetchData()
+        -- Re-fetch whenever this specific category finishes refreshing
+        LeaderboardService.LeaderboardRefreshed:Connect(function(refreshedId)
+            if refreshedId == category.id then
+                fetchData()
+            end
         end)
 
         scope:New "SurfaceGui" {

@@ -101,7 +101,7 @@ function RebirthService:PerformRebirth(player)
 		return false
 	end
 
-	local rebirthsToGain = self:GetRebirthsToGain(player)
+	local _rebirthsToGain = self:GetRebirthsToGain(player)
 	local multipliedRebirths = self:GetTotalRebirthsToGain(player)
 
 	-- Deduct reset awareness
@@ -121,7 +121,7 @@ function RebirthService:PerformRebirth(player)
 
 	self.RebirthPerformed:Fire(player, multipliedRebirths)
 
-	print(`Player {player.Name} rebirthed! Gained {rebirthsToGain} rebirths. Total: {profile.Data.Rebirths}`)
+
 
 	return true
 end

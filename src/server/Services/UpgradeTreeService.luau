@@ -297,7 +297,6 @@ function UpgradeTreeService:UnlockNode(player, treeName, nodeId)
     self.Client.UpdateVisuals:Fire(player)
     self.NodePurchased:Fire(player, treeName, nodeId)
 
-    print(`Player {player.Name} purchased node {nodeId} in tree {treeName}`)
     return true
 end
 
