@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
@@ -15,6 +16,8 @@ local DataService = Knit.CreateService{
 
 DataService.Profiles = {}
 DataService.ProfileLoaded = Signal.new()
+
+local CLEAR_DATA = true
 
 local PROFILE_TEMPLATE = {
 	Awareness = 0,
@@ -82,6 +85,12 @@ local PROFILE_TEMPLATE = {
 	Unlocks = {},
 
 	TutorialStage = 1, -- 1-based index into TutorialConfig.Stages; set beyond #Stages when complete
+
+	-- Analytics one-time event flags
+	Analytics_Reached250kAwareness = false,
+	Analytics_Tree1_1_Unlocked    = false,
+	Analytics_Tree1_1_Purchased   = false,
+	Analytics_FirstRebirth        = false,
 
 	-- Badge tracking (prevents duplicate awards across sessions)
 	Badges_FirstMeditation = false,
@@ -154,6 +163,11 @@ end
 function DataService:PlayerRemoving(player: Player)
 	local profile = DataService.Profiles[player]
 	if profile ~= nil then
+
+		if CLEAR_DATA and RunService:IsStudio() then
+			profile.Data = {}
+		end
+		
 		profile:EndSession()
 	end
 end

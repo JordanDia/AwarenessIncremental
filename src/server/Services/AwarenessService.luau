@@ -1,6 +1,7 @@
 -- ServerScriptService/Services/AwarenessService.lua
-local Players = game:GetService("Players")
+local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AnalyticsService  = game:GetService("AnalyticsService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -141,6 +142,14 @@ function AwarenessService:AddAwareness(player: Player, amount: number, isDeepTho
     self.AwarenessChanged:Fire(player, profile.Data.Awareness, isDeepThought)
     self.Client.AwarenessTotalChanged:Fire(player, profile.Data.AwarenessTotal)
     self.AwarenessEarned:Fire(player, amount)
+
+    -- Log first time reaching 250k awareness (one-time)
+    if not profile.Data.Analytics_Reached250kAwareness and profile.Data.AwarenessTotal >= 250000 then
+        profile.Data.Analytics_Reached250kAwareness = true
+        pcall(function()
+            AnalyticsService:LogFunnelStepEvent(player, "PlayerProgression", tostring(player.UserId), 1, "Reached 250k Awareness")
+        end)
+    end
     return profile.Data.Awareness
 end
 

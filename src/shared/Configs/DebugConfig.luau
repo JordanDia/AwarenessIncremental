@@ -4,7 +4,7 @@ return {
     -- NEVER ship with this enabled.
     Enabled = false,
 
-    Multiplier = 10000,
+    Multiplier = 100000,
 
     -- Which stats to boost
     Stats = {
