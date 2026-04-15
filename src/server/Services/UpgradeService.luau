@@ -100,7 +100,6 @@ function UpgradeService:BuyUpgrade(player, upgradeId)
 
 	-- Calculate cost of next level
 	local cost = config.CostFunc(currentLevel)
-    --print("Cost to upgrade", upgradeId, "from level", currentLevel, "to level", currentLevel + 1, "is", cost)
 
 
 	-- Check currency based on config
@@ -135,7 +134,6 @@ function UpgradeService:BuyUpgrade(player, upgradeId)
 	end
 
 	if not canAfford then
-		--print("Not enough", config.Currency, "! Needed:", cost)
 		return
 	end
 

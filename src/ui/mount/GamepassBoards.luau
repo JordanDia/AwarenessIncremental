@@ -133,27 +133,27 @@ return function(parent)
     local boardsFolder = workspace:WaitForChild("GamepassBoards")
 
     for _, pass in ipairs(GamepassConfig) do
-        local part = boardsFolder:FindFirstChild(pass.PartName)
-        if not part then
-            warn("GamepassBoards: no part named '" .. pass.PartName .. "' in workspace.GamepassBoards")
-            continue
-        end
+        task.spawn(function()
 
-        local owned = ownedMap[pass.PassId]
+            local part = boardsFolder:WaitForChild(pass.PartName)
 
-        scope:New "SurfaceGui" {
-            Name              = "GamepassBoard_" .. pass.PartName,
-            Adornee           = part,
-            Face              = Enum.NormalId.Front,
-            Parent            = parent,
-            SizingMode        = Enum.SurfaceGuiSizingMode.PixelsPerStud,
-            PixelsPerStud     = 50,
-            [Fusion.Children] = {
-                GamepassBoard(scope, pass, owned, function()
-                    GamepassService:PromptPurchase(pass.PassId)
-                end),
-            },
-        }
+            local owned = ownedMap[pass.PassId]
+
+            scope:New "SurfaceGui" {
+                Name              = "GamepassBoard_" .. pass.PartName,
+                Adornee           = part,
+                Face              = Enum.NormalId.Front,
+                Parent            = parent,
+                SizingMode        = Enum.SurfaceGuiSizingMode.PixelsPerStud,
+                PixelsPerStud     = 50,
+                [Fusion.Children] = {
+                    GamepassBoard(scope, pass, owned, function()
+                        GamepassService:PromptPurchase(pass.PassId)
+                    end),
+                },
+            }
+            
+        end)
     end
 
     return function()

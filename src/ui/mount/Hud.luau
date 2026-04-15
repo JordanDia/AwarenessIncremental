@@ -53,6 +53,7 @@ return function(parent)
     local LevelService = Knit.GetService("LevelService")
     local DonateService = Knit.GetService("DonateService")
     local GamepassService = Knit.GetService("GamepassService")
+    local BoostService = Knit.GetService("BoostService")
 
     local awarenessValue = scope:Value(AwarenessService:GetAwareness())
     local rebirthValue = scope:Value(RebirthService:GetRebirths())
@@ -300,6 +301,13 @@ return function(parent)
         end
 
         autoCollectVisible:set(inRange and true or false)
+    end)
+
+    -- when boost service toggles meditate anywhere, update the button state
+    BoostService.MeditateAnywhereBoostChanged:Connect(function(endTime)
+        local active = endTime > os.time()
+        meditateAnywhereActive:set(active)
+        ZoneController:SetMeditateAnywhereOverride(active)
     end)
 
     local abilityButtons = scope:Value {

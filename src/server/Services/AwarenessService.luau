@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local BoostConfig = require(ReplicatedStorage.Shared.Configs.BoostConfig)
 
 local MEDITATION_RADIUS = 60 -- studs
 
@@ -26,7 +27,8 @@ AwarenessService.MultiplierService = nil
 AwarenessService.AwarenessChanged = Signal.new() -- Fires (player, newAwareness)
 AwarenessService.MeditationTick = Signal.new()  -- Fires (player, interval) while meditating
 AwarenessService.AwarenessEarned = Signal.new() -- Fires (player, amount) on each earn
-AwarenessService._meditateAnywhereActive = {}
+AwarenessService._meditateAnywhereActive    = {}
+AwarenessService._meditationSpeedBoostActive = {}
 
 function AwarenessService:KnitStart()
     self.DataService = Knit.GetService("DataService")
@@ -46,7 +48,8 @@ function AwarenessService:KnitStart()
     end
 
     Players.PlayerRemoving:Connect(function(player)
-        self._meditateAnywhereActive[player] = nil
+        self._meditateAnywhereActive[player]     = nil
+        self._meditationSpeedBoostActive[player] = nil
     end)
 
     self.AwarenessChanged:Connect(function(player, newAwareness, isDeepThought)
@@ -66,6 +69,9 @@ function AwarenessService:InitializePlayer(player, profile)
     task.spawn(function()
         while player.Parent do
             local interval = self.UpgradeService:GetUpgradeEffect(player, "MeditationSpeed")
+            if self._meditationSpeedBoostActive[player] then
+                interval = interval / BoostConfig.MeditationSpeed.Multiplier
+            end
 
             -- Proximity check (bypassed if Meditate Anywhere is active)
             local inRange = self._meditateAnywhereActive[player] == true
@@ -152,6 +158,16 @@ function AwarenessService:SetAwareness(player, value: number)
     profile.Data.Awareness = value
     self.AwarenessChanged:Fire(player, value)
     return value
+end
+
+function AwarenessService:ToggleMeditateAnywhereBoost(player)
+    local active = not self._meditateAnywhereActive[player]
+    self._meditateAnywhereActive[player] = active
+end
+
+function AwarenessService:ToggleMeditationSpeedBoost(player)
+    local active = not self._meditationSpeedBoostActive[player]
+    self._meditationSpeedBoostActive[player] = active
 end
 
 -- =======================

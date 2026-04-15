@@ -35,6 +35,9 @@ local PROFILE_TEMPLATE = {
 	PlaytimeSeconds = 0,
 	RobuxSpent = 0,
 
+	LastMeditateAnywhereBoost = 0,
+	LastMeditationSpeedBoost  = 0,
+
 	Upgrades = {
 
 		-- Meditation
@@ -93,6 +96,8 @@ local PROFILE_TEMPLATE = {
 		Progress  = {}, -- [questId] = number
 		Claimed   = {}, -- [questId] = true
 	},
+
+	Boosts = {},
 
 }
 
@@ -155,6 +160,12 @@ end
 
 function DataService:GetProfile(player: Player)
 	return DataService.Profiles[player] or nil
+end
+
+function DataService:GetData(player: Player)
+	local profile = DataService.Profiles[player]
+	if not profile then return nil end
+	return profile.Data
 end
 
 function DataService.Client:GetFirstSessionTime(player: Player)
