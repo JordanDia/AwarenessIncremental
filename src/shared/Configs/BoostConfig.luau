@@ -1,11 +1,11 @@
 return {
     MeditateAnywhere = {
-        Duration = 10, -- 5 * 60,        -- seconds active
-        Cooldown = 5 -- 24 * 60 * 60,  -- 24-hour reset
+        Duration = 10 * 60,        -- seconds active
+        Cooldown = 24 * 60 * 60,  -- 24-hour reset
     },
     MeditationSpeed = {
-        Duration   = 10, -- 5 * 60,
-        Cooldown   = 5, -- 24 * 60 * 60,
+        Duration   = 3 * 60,
+        Cooldown   = 24 * 60 * 60,
         Multiplier = 3,            -- 3x faster meditation ticks
     },
 }

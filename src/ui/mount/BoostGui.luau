@@ -1,9 +1,9 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
+local RunService        = game:GetService("RunService")
 
-local Fusion   = require(ReplicatedStorage.Packages.Fusion)
-local Knit     = require(ReplicatedStorage.Packages.Knit)
-local scoped   = Fusion.scoped
+local Fusion  = require(ReplicatedStorage.Packages.Fusion)
+local Knit    = require(ReplicatedStorage.Packages.Knit)
+local scoped  = Fusion.scoped
 
 local BoostIcon = require("../components/BoostIcon")
 
@@ -25,7 +25,7 @@ return function(parent)
 
     -- Current time updated every frame
     local currentTime = scope:Value(os.time())
-    RunService.Heartbeat:Connect(function()
+    local heartbeatConn = RunService.Heartbeat:Connect(function()
         currentTime:set(os.time())
     end)
 
@@ -44,12 +44,18 @@ return function(parent)
         return use(msEndTime) > use(currentTime)
     end)
 
-    -- Listen for server signals
-    BoostService.MeditateAnywhereBoostChanged:Connect(function(endTime)
-        maEndTime:set(endTime)
+    -- Fetch initial state so we don't miss boosts that fired before we connected
+    task.spawn(function()
+        local endTimes = BoostService:GetBoostEndTimes()
+        maEndTime:set(endTimes.MeditateAnywhere)
+        msEndTime:set(endTimes.MeditationSpeed)
     end)
 
-    BoostService.MeditationSpeedBoostChanged:Connect(function(endTime)
+    -- Keep in sync with server updates
+    local maConn = BoostService.MeditateAnywhereBoostChanged:Connect(function(endTime)
+        maEndTime:set(endTime)
+    end)
+    local msConn = BoostService.MeditationSpeedBoostChanged:Connect(function(endTime)
         msEndTime:set(endTime)
     end)
 
@@ -95,6 +101,9 @@ return function(parent)
     }
 
     return function()
+        heartbeatConn:Disconnect()
+        maConn:Disconnect()
+        msConn:Disconnect()
         scope:doCleanup()
     end
 end

@@ -88,4 +88,15 @@ function BoostService:_GiveMeditationSpeedBoost(player: Player, duration: number
     end)
 end
 
+-- Returns the current end times for all boosts so clients can sync on join
+function BoostService.Client:GetBoostEndTimes(player)
+    local profile = DataService:GetProfile(player)
+    if not profile then return { MeditateAnywhere = 0, MeditationSpeed = 0 } end
+    local data = profile.Data
+    return {
+        MeditateAnywhere = data.LastMeditateAnywhereBoost + BoostConfig.MeditateAnywhere.Duration,
+        MeditationSpeed  = data.LastMeditationSpeedBoost  + BoostConfig.MeditationSpeed.Duration,
+    }
+end
+
 return BoostService
