@@ -37,13 +37,15 @@ return function(parent)
         end)
     end
 
-    local function applyStage(cfg, prog)
+    local function applyStage(cfg, prog, showEndIfComplete)
         if endMessageThread then
             task.cancel(endMessageThread)
             endMessageThread = nil
         end
         if not cfg then
-            showEndMessage()
+            if showEndIfComplete then
+                showEndMessage()
+            end
             return
         end
         titleText:set(cfg.Title)
@@ -53,13 +55,13 @@ return function(parent)
         visible:set(true)
     end
 
-    -- Seed from server on load
+    -- Seed from server on load — do NOT show end message if already complete
     local _, initStage, initProg = TutorialService:GetCurrentStage()
-    applyStage(initStage, initProg)
+    applyStage(initStage, initProg, false)
 
     -- Listen for stage advances
     TutorialService.StageChanged:Connect(function(_index, cfg, p)
-        applyStage(cfg, p)
+        applyStage(cfg, p, true)
     end)
 
     -- Live progress updates within a stage

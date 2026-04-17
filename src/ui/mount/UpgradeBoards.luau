@@ -21,6 +21,7 @@ return function(parent)
         AwakeningFrame = AwakeningFrame,
     })
 
+    local DataService         = Knit.GetService("DataService") 
     local RebirthService      = Knit.GetService("RebirthService")
     local UpgradeService      = Knit.GetService("UpgradeService")
     local AwakeningService    = Knit.GetService("AwakeningService")
@@ -46,6 +47,11 @@ return function(parent)
         if treeName == "Tree1" and nodeId == "1-9" then
             tree1Node9Purchased:set(true)
         end
+    end)
+
+    DataService.DataLoaded:Connect(function(data)
+        crystalUnlocked:set(UnlockService:IsUnlocked("CrystalCollection"))
+        tree1Node9Purchased:set(UpgradeTreeService:IsNodePurchased("Tree1", "1-9"))
     end)
 
     -- Update awakening level whenever it changes (also used later for the awakening board)

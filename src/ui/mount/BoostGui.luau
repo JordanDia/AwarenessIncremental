@@ -44,20 +44,18 @@ return function(parent)
         return use(msEndTime) > use(currentTime)
     end)
 
-    -- Fetch initial state so we don't miss boosts that fired before we connected
-    task.spawn(function()
-        local endTimes = BoostService:GetBoostEndTimes()
-        maEndTime:set(endTimes.MeditateAnywhere)
-        msEndTime:set(endTimes.MeditationSpeed)
-    end)
-
-    -- Keep in sync with server updates
+    -- Connect first so we never miss a signal that fires during the RPC below
     local maConn = BoostService.MeditateAnywhereBoostChanged:Connect(function(endTime)
         maEndTime:set(endTime)
     end)
     local msConn = BoostService.MeditationSpeedBoostChanged:Connect(function(endTime)
         msEndTime:set(endTime)
     end)
+
+    -- Fetch initial state (yields, but BoostGui is already inside UIRoot's task.spawn)
+    local endTimes = BoostService:GetBoostEndTimes()
+    maEndTime:set(endTimes.MeditateAnywhere)
+    msEndTime:set(endTimes.MeditationSpeed)
 
     scope:New "ScreenGui" {
         Name           = "BoostGui",

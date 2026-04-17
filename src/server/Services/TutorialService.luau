@@ -121,10 +121,14 @@ function TutorialService:KnitStart()
     -- task.defer ensures all other ProfileLoaded handlers (e.g. AwarenessService)
     -- have run first so GetAwareness returns the correct stored value.
     self.DataService.ProfileLoaded:Connect(function(player)
-        -- Step 1: player joined the game
-        pcall(function()
-            AnalyticsService:LogOnboardingFunnelStepEvent(player, 1, "Joined Game")
-        end)
+        -- Step 1: only log the very first time this player ever joins
+        local profile = self.DataService:GetProfile(player)
+        if profile and not profile.Data.Analytics_JoinedGame then
+            profile.Data.Analytics_JoinedGame = true
+            pcall(function()
+                AnalyticsService:LogOnboardingFunnelStepEvent(player, 1, "Joined Game")
+            end)
+        end
         task.defer(function()
             self:_AdvanceAndBroadcast(player)
         end)

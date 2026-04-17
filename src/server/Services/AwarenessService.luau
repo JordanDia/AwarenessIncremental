@@ -186,6 +186,12 @@ function AwarenessService.Client:GetAwareness(player)
     return self.Server:GetAwareness(player)
 end
 
+function AwarenessService.Client:GetAwarenessTotal(player)
+    local profile = self.Server.DataService:GetProfile(player)
+    if not profile then return 0 end
+    return profile.Data.AwarenessTotal or 0
+end
+
 -- Toggle Meditate Anywhere for a player. Returns (success, active).
 -- success=false means the player doesn't own the gamepass.
 function AwarenessService.Client:ToggleMeditateAnywhere(player)

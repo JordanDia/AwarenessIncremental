@@ -17,7 +17,7 @@ local DataService = Knit.CreateService{
 DataService.Profiles = {}
 DataService.ProfileLoaded = Signal.new()
 
-local CLEAR_DATA = true
+local CLEAR_DATA_ON_LEAVE = false
 
 local PROFILE_TEMPLATE = {
 	Awareness = 0,
@@ -87,6 +87,7 @@ local PROFILE_TEMPLATE = {
 	TutorialStage = 1, -- 1-based index into TutorialConfig.Stages; set beyond #Stages when complete
 
 	-- Analytics one-time event flags
+	Analytics_JoinedGame          = false,
 	Analytics_Reached250kAwareness = false,
 	Analytics_Tree1_1_Unlocked    = false,
 	Analytics_Tree1_1_Purchased   = false,
@@ -163,8 +164,8 @@ end
 function DataService:PlayerRemoving(player: Player)
 	local profile = DataService.Profiles[player]
 	if profile ~= nil then
-
-		if CLEAR_DATA and RunService:IsStudio() then
+		print(profile.Data)
+		if CLEAR_DATA_ON_LEAVE and RunService:IsStudio() then
 			profile.Data = {}
 		end
 		

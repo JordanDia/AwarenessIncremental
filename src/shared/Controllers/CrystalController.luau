@@ -4,6 +4,8 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local FloatingTextComponent = require(ReplicatedStorage.UI.components.FloatingText)
 
 local AUTO_COLLECT_TIMEOUT = 8 -- seconds before skipping a stuck crystal
 
@@ -23,6 +25,14 @@ function CrystalController:KnitStart()
     self.UnlockService = Knit.GetService("UnlockService")
     self.UpgradeService = Knit.GetService("UpgradeService")
     self.AwakeningService = Knit.GetService("AwakeningService")
+
+    local lastCrystals = self.CrystalService:GetCrystals()
+    self.CrystalService.CrystalsChanged:Connect(function(amount)
+        if amount > lastCrystals then
+            self:ShowFloatingText(amount - lastCrystals)
+        end
+        lastCrystals = amount
+    end)
 
     self.CrystalService.StartCrystals:Connect(function()
         self:StartSpawning()
@@ -139,6 +149,47 @@ function CrystalController:SpawnCrystal()
             end
         end)
     end
+end
+
+function CrystalController:ShowFloatingText(amount: number)
+    local character = LocalPlayer.Character
+    if not character then return end
+    local head = character:FindFirstChild("Head")
+    if not head then return end
+
+    local scope = Fusion.scoped(Fusion, { FloatingTextComponent = FloatingTextComponent })
+
+    local gui = scope:FloatingTextComponent {
+        Amount     = amount,
+        Adornee    = head,
+        TextColor3 = Color3.fromRGB(170, 85, 255),
+    }
+    gui.Parent = LocalPlayer.PlayerGui
+
+    local randomX = math.random(-200, 200) / 100
+    local randomY = math.random(100, 200) / 100
+    gui.StudsOffset = Vector3.new(randomX, randomY, 0)
+
+    local tweenInfo = TweenInfo.new(1, Enum.EasingStyle.Linear, Enum.EasingDirection.Out)
+    TweenService:Create(gui, tweenInfo, {
+        StudsOffset = Vector3.new(randomX, randomY + 2.5, 0),
+    }):Play()
+
+    local textLabel = gui:FindFirstChildWhichIsA("TextLabel")
+    if textLabel then
+        TweenService:Create(textLabel, tweenInfo, {
+            TextTransparency      = 1,
+            TextStrokeTransparency = 1,
+        }):Play()
+        local uiStroke = textLabel:FindFirstChild("UIStroke")
+        if uiStroke then
+            TweenService:Create(uiStroke, tweenInfo, { Transparency = 1 }):Play()
+        end
+    end
+
+    task.delay(2, function()
+        scope:doCleanup()
+    end)
 end
 
 function CrystalController:CollectCrystal(crystal)
