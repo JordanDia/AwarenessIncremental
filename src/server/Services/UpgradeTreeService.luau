@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local Knit = require(ReplicatedStorage.Packages.Knit)
+local Players           = game:GetService("Players")
+local AnalyticsService  = game:GetService("AnalyticsService")
+local Knit   = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local UpgradeTreeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeTreeConfig)
@@ -291,6 +292,21 @@ function UpgradeTreeService:UnlockNode(player, treeName, nodeId)
     -- Unlock children (make them visible)
     for _, childNodeId in ipairs(nodeConfig.Unlocks) do
         profile.Data.UnlockedNodes[treeName][childNodeId] = true
+        -- Track when node 1-1 first becomes available (one-time only)
+        if treeName == "Tree1" and childNodeId == "1-1" and not profile.Data.Analytics_Tree1_1_Unlocked then
+            profile.Data.Analytics_Tree1_1_Unlocked = true
+            pcall(function()
+                AnalyticsService:LogFunnelStepEvent(player, "PlayerProgression", tostring(player.UserId), 2, "Unlocked Node 1-1")
+            end)
+        end
+    end
+
+    -- Track when node 1-1 is purchased (one-time only)
+    if treeName == "Tree1" and nodeId == "1-1" and not profile.Data.Analytics_Tree1_1_Purchased then
+        profile.Data.Analytics_Tree1_1_Purchased = true
+        pcall(function()
+            AnalyticsService:LogFunnelStepEvent(player, "PlayerProgression", tostring(player.UserId), 3, "Purchased Node 1-1")
+        end)
     end
 
     self.Client.NodeUnlocked:Fire(player, treeName, nodeId, nodeConfig.Rewards)

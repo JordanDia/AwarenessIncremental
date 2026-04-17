@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local Knit = require(ReplicatedStorage.Packages.Knit)
+local Players           = game:GetService("Players")
+local AnalyticsService  = game:GetService("AnalyticsService")
+local Knit   = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local REBIRTH_COST = 1000 -- Awareness per rebirth
@@ -120,6 +121,14 @@ function RebirthService:PerformRebirth(player)
 	self.Client.RebirthsToGainUpdated:Fire(player, 0) -- Reset to 0 after rebirth
 
 	self.RebirthPerformed:Fire(player, multipliedRebirths)
+
+	-- Log first rebirth analytics event (one-time)
+	if not profile.Data.Analytics_FirstRebirth then
+		profile.Data.Analytics_FirstRebirth = true
+		pcall(function()
+			AnalyticsService:LogProgressionEvent(player, "Rebirth", Enum.AnalyticsProgressionStatus["Complete"], {"FirstRebirth"})
+		end)
+	end
 
 
 

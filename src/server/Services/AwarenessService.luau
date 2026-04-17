@@ -1,9 +1,11 @@
 -- ServerScriptService/Services/AwarenessService.lua
-local Players = game:GetService("Players")
+local Players           = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AnalyticsService  = game:GetService("AnalyticsService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local BoostConfig = require(ReplicatedStorage.Shared.Configs.BoostConfig)
 
 local MEDITATION_RADIUS = 60 -- studs
 
@@ -26,7 +28,8 @@ AwarenessService.MultiplierService = nil
 AwarenessService.AwarenessChanged = Signal.new() -- Fires (player, newAwareness)
 AwarenessService.MeditationTick = Signal.new()  -- Fires (player, interval) while meditating
 AwarenessService.AwarenessEarned = Signal.new() -- Fires (player, amount) on each earn
-AwarenessService._meditateAnywhereActive = {}
+AwarenessService._meditateAnywhereActive    = {}
+AwarenessService._meditationSpeedBoostActive = {}
 
 function AwarenessService:KnitStart()
     self.DataService = Knit.GetService("DataService")
@@ -46,7 +49,8 @@ function AwarenessService:KnitStart()
     end
 
     Players.PlayerRemoving:Connect(function(player)
-        self._meditateAnywhereActive[player] = nil
+        self._meditateAnywhereActive[player]     = nil
+        self._meditationSpeedBoostActive[player] = nil
     end)
 
     self.AwarenessChanged:Connect(function(player, newAwareness, isDeepThought)
@@ -66,6 +70,9 @@ function AwarenessService:InitializePlayer(player, profile)
     task.spawn(function()
         while player.Parent do
             local interval = self.UpgradeService:GetUpgradeEffect(player, "MeditationSpeed")
+            if self._meditationSpeedBoostActive[player] then
+                interval = interval / BoostConfig.MeditationSpeed.Multiplier
+            end
 
             -- Proximity check (bypassed if Meditate Anywhere is active)
             local inRange = self._meditateAnywhereActive[player] == true
@@ -135,6 +142,14 @@ function AwarenessService:AddAwareness(player: Player, amount: number, isDeepTho
     self.AwarenessChanged:Fire(player, profile.Data.Awareness, isDeepThought)
     self.Client.AwarenessTotalChanged:Fire(player, profile.Data.AwarenessTotal)
     self.AwarenessEarned:Fire(player, amount)
+
+    -- Log first time reaching 250k awareness (one-time)
+    if not profile.Data.Analytics_Reached250kAwareness and profile.Data.AwarenessTotal >= 250000 then
+        profile.Data.Analytics_Reached250kAwareness = true
+        pcall(function()
+            AnalyticsService:LogFunnelStepEvent(player, "PlayerProgression", tostring(player.UserId), 1, "Reached 250k Awareness")
+        end)
+    end
     return profile.Data.Awareness
 end
 
@@ -154,11 +169,27 @@ function AwarenessService:SetAwareness(player, value: number)
     return value
 end
 
+function AwarenessService:ToggleMeditateAnywhereBoost(player)
+    local active = not self._meditateAnywhereActive[player]
+    self._meditateAnywhereActive[player] = active
+end
+
+function AwarenessService:ToggleMeditationSpeedBoost(player)
+    local active = not self._meditationSpeedBoostActive[player]
+    self._meditationSpeedBoostActive[player] = active
+end
+
 -- =======================
 -- Client functions exposed via Knit
 -- =======================
 function AwarenessService.Client:GetAwareness(player)
     return self.Server:GetAwareness(player)
+end
+
+function AwarenessService.Client:GetAwarenessTotal(player)
+    local profile = self.Server.DataService:GetProfile(player)
+    if not profile then return 0 end
+    return profile.Data.AwarenessTotal or 0
 end
 
 -- Toggle Meditate Anywhere for a player. Returns (success, active).

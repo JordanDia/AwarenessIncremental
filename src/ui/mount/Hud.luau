@@ -53,6 +53,7 @@ return function(parent)
     local LevelService = Knit.GetService("LevelService")
     local DonateService = Knit.GetService("DonateService")
     local GamepassService = Knit.GetService("GamepassService")
+    local BoostService = Knit.GetService("BoostService")
 
     local awarenessValue = scope:Value(AwarenessService:GetAwareness())
     local rebirthValue = scope:Value(RebirthService:GetRebirths())
@@ -300,6 +301,21 @@ return function(parent)
         end
 
         autoCollectVisible:set(inRange and true or false)
+    end)
+
+    -- Fetch initial boost state so we don't miss a boost that fired before we connected
+    task.spawn(function()
+        local endTimes = BoostService:GetBoostEndTimes()
+        local active = endTimes.MeditateAnywhere > os.time()
+        meditateAnywhereActive:set(active)
+        ZoneController:SetMeditateAnywhereOverride(active)
+    end)
+
+    -- Keep in sync with server updates
+    BoostService.MeditateAnywhereBoostChanged:Connect(function(endTime)
+        local active = endTime > os.time()
+        meditateAnywhereActive:set(active)
+        ZoneController:SetMeditateAnywhereOverride(active)
     end)
 
     local abilityButtons = scope:Value {

@@ -13,15 +13,20 @@ local STORE_ROBUX     = "LB_RobuxSpent"
 local STORE_PLAYTIME  = "LB_Playtime"
 
 local CATEGORIES = {
-    { id = "TopAwareness",    label = "Top Awareness",     storeId = STORE_AWARENESS, dataKey = "AwarenessTotal",    wholeNumber = true  },
-    { id = "TopRebirths",     label = "Top Rebirths",      storeId = STORE_REBIRTHS,  dataKey = "RebirthsTotal",     wholeNumber = true  },
-    { id = "TopCrystals",     label = "Top Crystals",      storeId = STORE_CRYSTALS,  dataKey = "CrystalsTotal",     wholeNumber = true  },
-    { id = "TopAstralEchoes", label = "Top Astral Echoes", storeId = STORE_ECHOES,    dataKey = "AstralEchoesTotal", wholeNumber = true  },
-    { id = "TopRobuxSpent",   label = "Top Robux Spent",   storeId = STORE_ROBUX,     dataKey = "RobuxSpent",       rawValue = true },
-    { id = "TopTimePlayed",   label = "Top Time Played",   storeId = STORE_PLAYTIME,  dataKey = "PlaytimeSeconds",  rawValue = true },
+    { id = "TopAwareness",    label = "Top Awareness",     storeId = STORE_AWARENESS, dataKey = "AwarenessTotal",    wholeNumber = true, maxValue = 1e99 },
+    { id = "TopRebirths",     label = "Top Rebirths",      storeId = STORE_REBIRTHS,  dataKey = "RebirthsTotal",     wholeNumber = true, maxValue = 1e30 },
+    { id = "TopCrystals",     label = "Top Crystals",      storeId = STORE_CRYSTALS,  dataKey = "CrystalsTotal",     wholeNumber = true, maxValue = 1e30 },
+    { id = "TopAstralEchoes", label = "Top Astral Echoes", storeId = STORE_ECHOES,    dataKey = "AstralEchoesTotal", wholeNumber = true, maxValue = 1e50 },
+    { id = "TopRobuxSpent",   label = "Top Robux Spent",   storeId = STORE_ROBUX,     dataKey = "RobuxSpent",        rawValue = true,    maxValue = 1e99 },
+    { id = "TopTimePlayed",   label = "Top Time Played",   storeId = STORE_PLAYTIME,  dataKey = "PlaytimeSeconds",   rawValue = true,    maxValue = 1e8  },
 }
 
-local BLOCKED_USER_IDS = { [33124593] = true }
+local BLOCKED_USER_IDS = {
+    [33124593] = true,
+    [289701185] = true,
+    [3545905465] = true,
+
+}
 
 local usernameCache = {}
 
@@ -88,6 +93,7 @@ function LeaderboardService:_UpdatePlayerStats(player)
     for _, category in ipairs(CATEGORIES) do
         local raw = profile.Data[category.dataKey]
         if raw == nil then continue end
+        if category.maxValue and raw > category.maxValue then continue end
         local store = self._stores[category.id]
         local encoded = category.rawValue and math.floor(raw) or encodeValue(raw)
         local ok, err = pcall(function()

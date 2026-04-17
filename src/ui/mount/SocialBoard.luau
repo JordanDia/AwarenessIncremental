@@ -221,17 +221,6 @@ return function(parent)
                     -- Friends row
                     BoardRow(scope, ICON_FRIENDS, friendBonus, "Friends give +10% Faith each"),
 
-                    -- -- Divider
-                    -- scope:New "Frame" {
-                    --     LayoutOrder      = 99,
-                    --     Size             = UDim2.fromScale(0.85, 0),
-                    --     BackgroundColor3 = COLOR_DIVIDER,
-                    --     BorderSizePixel  = 0,
-                    --     [Fusion.Children] = {
-                    --         scope:New "UISizeConstraint" { MinSize = Vector2.new(0, 2), MaxSize = Vector2.new(math.huge, 2) },
-                    --     },
-                    -- },
-
                     -- Premium row
                     BoardRow(scope, ICON_PREMIUM, premiumBonus, "Premium gives +10% Faith"),
                 },

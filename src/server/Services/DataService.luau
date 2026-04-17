@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local ServerScriptService = game:GetService("ServerScriptService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
@@ -15,6 +16,8 @@ local DataService = Knit.CreateService{
 
 DataService.Profiles = {}
 DataService.ProfileLoaded = Signal.new()
+
+local CLEAR_DATA_ON_LEAVE = false
 
 local PROFILE_TEMPLATE = {
 	Awareness = 0,
@@ -34,6 +37,9 @@ local PROFILE_TEMPLATE = {
 	Level = 1,
 	PlaytimeSeconds = 0,
 	RobuxSpent = 0,
+
+	LastMeditateAnywhereBoost = 0,
+	LastMeditationSpeedBoost  = 0,
 
 	Upgrades = {
 
@@ -80,6 +86,13 @@ local PROFILE_TEMPLATE = {
 
 	TutorialStage = 1, -- 1-based index into TutorialConfig.Stages; set beyond #Stages when complete
 
+	-- Analytics one-time event flags
+	Analytics_JoinedGame          = false,
+	Analytics_Reached250kAwareness = false,
+	Analytics_Tree1_1_Unlocked    = false,
+	Analytics_Tree1_1_Purchased   = false,
+	Analytics_FirstRebirth        = false,
+
 	-- Badge tracking (prevents duplicate awards across sessions)
 	Badges_FirstMeditation = false,
 	Badges_FirstCrystal    = false,
@@ -93,6 +106,8 @@ local PROFILE_TEMPLATE = {
 		Progress  = {}, -- [questId] = number
 		Claimed   = {}, -- [questId] = true
 	},
+
+	Boosts = {},
 
 }
 
@@ -149,12 +164,23 @@ end
 function DataService:PlayerRemoving(player: Player)
 	local profile = DataService.Profiles[player]
 	if profile ~= nil then
+		print(profile.Data)
+		if CLEAR_DATA_ON_LEAVE and RunService:IsStudio() then
+			profile.Data = {}
+		end
+		
 		profile:EndSession()
 	end
 end
 
 function DataService:GetProfile(player: Player)
 	return DataService.Profiles[player] or nil
+end
+
+function DataService:GetData(player: Player)
+	local profile = DataService.Profiles[player]
+	if not profile then return nil end
+	return profile.Data
 end
 
 function DataService.Client:GetFirstSessionTime(player: Player)

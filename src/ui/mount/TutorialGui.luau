@@ -25,39 +25,48 @@ return function(parent)
         return math.floor(use(progress)) .. " / " .. math.floor(use(goal))
     end)
 
+    local endMessageThread = nil
+
     local function showEndMessage()
         titleText:set("Keep upgrading and exploring the map! Have fun!")
         showBar:set(false)
         visible:set(true)
-        task.delay(6, function()
+        endMessageThread = task.delay(6, function()
+            endMessageThread = nil
             visible:set(false)
         end)
     end
 
-    local function applyStage(stageConfig, prog)
-        if not stageConfig then
-            showEndMessage()
+    local function applyStage(cfg, prog, showEndIfComplete)
+        if endMessageThread then
+            task.cancel(endMessageThread)
+            endMessageThread = nil
+        end
+        if not cfg then
+            if showEndIfComplete then
+                showEndMessage()
+            end
             return
         end
-        titleText:set(stageConfig.Title)
-        showBar:set(stageConfig.ShowBar)
-        goal:set(stageConfig.Goal or 1)
+        titleText:set(cfg.Title)
+        showBar:set(cfg.ShowBar)
+        goal:set(cfg.Goal or 1)
         progress:set(prog or 0)
         visible:set(true)
     end
 
-    -- Seed from server on load
-    local stageIndex, stageConfig, prog = TutorialService:GetCurrentStage()
-    applyStage(stageConfig, prog)
+    -- Seed from server on load — do NOT show end message if already complete
+    local _, initStage, initProg = TutorialService:GetCurrentStage()
+    applyStage(initStage, initProg, false)
 
     -- Listen for stage advances
-    TutorialService.StageChanged:Connect(function(_index, stageConfig, prog)
-        applyStage(stageConfig, prog)
+    TutorialService.StageChanged:Connect(function(_index, cfg, p)
+        applyStage(cfg, p, true)
     end)
 
     -- Live progress updates within a stage
-    TutorialService.ProgressUpdated:Connect(function(prog, g)
-        progress:set(prog)
+    TutorialService.ProgressUpdated:Connect(function(p, g)
+        progress:set(p)
         goal:set(g)
     end)
 

@@ -23,6 +23,7 @@ function CrystalService:KnitStart()
     self.UnlockService = Knit.GetService("UnlockService")
     self.UpgradeService = Knit.GetService("UpgradeService")
     self.MultiplierService = Knit.GetService("MultiplierService")
+    self.CrystalComboService = Knit.GetService("CrystalComboService")
 
     LevelService = Knit.GetService("LevelService")
 
@@ -88,8 +89,9 @@ function CrystalService:OnCrystalCollected(player)
     local value = self.UpgradeService:GetUpgradeEffect(player, "CrystalValue")
     local upgradeMultiplier = self.UpgradeService:GetUpgradeEffect(player, "CrystalMultiplier")
     local treeMultiplier = self.MultiplierService:GetMultiplier(player, "CrystalValue")
+    local comboMultiplier = self.CrystalComboService:ApplyAndGetCombo(player)
 
-    local finalValue = math.round(value * upgradeMultiplier * treeMultiplier)
+    local finalValue = math.round(value * upgradeMultiplier * treeMultiplier * comboMultiplier)
 
     self:AddCrystals(player, finalValue)
     LevelService:AddXP(player, 1)

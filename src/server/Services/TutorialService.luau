@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local AnalyticsService  = game:GetService("AnalyticsService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local TutorialConfig = require(ReplicatedStorage.Shared.Configs.TutorialConfig)
@@ -81,11 +82,16 @@ end
 function TutorialService:_AdvanceAndBroadcast(player)
     -- Keep advancing while the current stage is already met
     while not self:_IsComplete(player) do
-        local stage = STAGES[self:_GetStage(player)]
+        local stageIndex = self:_GetStage(player)
+        local stage = STAGES[stageIndex]
         if not stage then break end
         if self:_GetProgress(player) >= stage.Goal then
             local profile = self.DataService:GetProfile(player)
             profile.Data.TutorialStage += 1
+            -- Stage N complete = funnel step N+1 (step 1 is "Joined Game")
+            pcall(function()
+                AnalyticsService:LogOnboardingFunnelStepEvent(player, stageIndex + 1, stage.Title)
+            end)
         else
             break
         end
@@ -115,6 +121,14 @@ function TutorialService:KnitStart()
     -- task.defer ensures all other ProfileLoaded handlers (e.g. AwarenessService)
     -- have run first so GetAwareness returns the correct stored value.
     self.DataService.ProfileLoaded:Connect(function(player)
+        -- Step 1: only log the very first time this player ever joins
+        local profile = self.DataService:GetProfile(player)
+        if profile and not profile.Data.Analytics_JoinedGame then
+            profile.Data.Analytics_JoinedGame = true
+            pcall(function()
+                AnalyticsService:LogOnboardingFunnelStepEvent(player, 1, "Joined Game")
+            end)
+        end
         task.defer(function()
             self:_AdvanceAndBroadcast(player)
         end)

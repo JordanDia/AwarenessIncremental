@@ -8,6 +8,8 @@ local SocialBoard = require("./mount/SocialBoard")
 local GamepassOverviewBoard = require("./mount/GamepassOverviewBoard")
 local LeaderboardBoards = require("./mount/LeaderboardBoards")
 local DonateBoard = require("./mount/DonateBoard")
+local BoostGui = require("./mount/BoostGui")
+local CrystalCombo = require("./components/CrystalCombo")
 
 return function(parent: Instance)
     local mounted = {}
@@ -23,6 +25,8 @@ return function(parent: Instance)
         GamepassOverviewBoard = GamepassOverviewBoard,
         LeaderboardBoards     = LeaderboardBoards,
         DonateBoard           = DonateBoard,
+        BoostGui              = BoostGui,
+        CrystalCombo          = function(_) return CrystalCombo() end,
     }
 
     -- Mount all UIs in parallel so WaitForChild calls don't block each other
