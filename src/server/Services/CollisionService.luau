@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local PLAYER_GROUP = "Players"
+local SPIRIT_GROUP = "Spirit"
 
 local CollisionService = Knit.CreateService {
     Name = "CollisionService",
@@ -12,6 +13,10 @@ local CollisionService = Knit.CreateService {
 function CollisionService:KnitInit()
     PhysicsService:RegisterCollisionGroup(PLAYER_GROUP)
     PhysicsService:CollisionGroupSetCollidable(PLAYER_GROUP, PLAYER_GROUP, false)
+
+    PhysicsService:RegisterCollisionGroup(SPIRIT_GROUP)
+    PhysicsService:CollisionGroupSetCollidable(SPIRIT_GROUP, "Default", false)
+    PhysicsService:CollisionGroupSetCollidable(SPIRIT_GROUP, PLAYER_GROUP, false)
 end
 
 local function setCharacterGroup(character: Model)
