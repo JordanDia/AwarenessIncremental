@@ -379,7 +379,7 @@ end
 
 -- Compute current value and push it to MultiplierService + notify client
 function UpgradeTreeService:_ApplyDynamicReward(player, treeName, nodeId, reward)
-    local value = self:ComputeDynamicValue(player, reward.Source)
+    local value = math.min(50, self:ComputeDynamicValue(player, reward.Source))
     local source = treeName .. "_" .. nodeId
     self.MultiplierService:SetSource(player, reward.Stat, source, value)
     self.Client.DynamicNodeUpdated:Fire(player, treeName, nodeId, value)
@@ -393,6 +393,15 @@ function UpgradeTreeService:_UpdateDynamicRewardsForSource(player, source)
         if entry.reward.Source == source then
             self:_ApplyDynamicReward(player, entry.treeName, entry.nodeId, entry.reward)
         end
+    end
+end
+
+-- Force-recalculate every dynamic reward for a player (used by admin tools after stat edits)
+function UpgradeTreeService:RecalculateAllDynamic(player)
+    local rewards = self.DynamicRewards[player]
+    if not rewards then return end
+    for _, entry in rewards do
+        self:_ApplyDynamicReward(player, entry.treeName, entry.nodeId, entry.reward)
     end
 end
 

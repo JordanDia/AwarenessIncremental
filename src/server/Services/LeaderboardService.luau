@@ -23,8 +23,6 @@ local CATEGORIES = {
 
 local BLOCKED_USER_IDS = {
     [33124593] = true,
-    [289701185] = true,
-    [3545905465] = true,
 
 }
 

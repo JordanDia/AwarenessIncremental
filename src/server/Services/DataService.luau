@@ -24,15 +24,13 @@ local PROFILE_TEMPLATE = {
 	Rebirths = 0,
 	Crystals = 0,
 	AstralEchoes = 0,
-	Harmony = 0,
 	AwakeningLevel = 0,
 
 	AwarenessTotal = 0,
 	RebirthsTotal = 0,
 	CrystalsTotal = 0,
 	AstralEchoesTotal = 0,
-	HarmonyTotal = 0,
-
+	
 	XP = 0,
 	Level = 1,
 	PlaytimeSeconds = 0,
@@ -112,6 +110,7 @@ local PROFILE_TEMPLATE = {
 }
 
 local PlayerStore = ProfileStore.New("PlayerStoreTest", PROFILE_TEMPLATE)
+DataService.PlayerStore = PlayerStore
 
 function DataService:KnitInit()
 	Players.PlayerAdded:Connect(function(player: Player)
@@ -149,6 +148,7 @@ function DataService:LoadPlayer(player: Player)
 
 		if player.Parent == Players then
 			DataService.Profiles[player] = profile
+
 			DataService.ProfileLoaded:Fire(player, profile)
 
 		else
