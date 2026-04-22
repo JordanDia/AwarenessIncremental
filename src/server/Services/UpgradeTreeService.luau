@@ -10,6 +10,7 @@ local UpgradeTreeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeTreeCo
 -- They are unlocked explicitly via UnlockTreeRoot() when the player meets the requirement.
 local LOCKED_TREES = {
     Tree2 = true,
+    -- Tree3 = true, -- unlocked by default for testing
 }
 
 local UpgradeTreeService = Knit.CreateService {
@@ -31,6 +32,7 @@ function UpgradeTreeService:KnitStart()
     self.RebirthService = Knit.GetService("RebirthService")
     self.CrystalService = Knit.GetService("CrystalService")
     self.AstralEchoService = Knit.GetService("AstralEchoService")
+    self.AstralProjectionService = Knit.GetService("AstralProjectionService")
     self.UnlockService = Knit.GetService("UnlockService")
     self.MultiplierService = Knit.GetService("MultiplierService")
     self.LevelService = Knit.GetService("LevelService")
@@ -81,6 +83,14 @@ function UpgradeTreeService:KnitStart()
         self:_UpdateDynamicRewardsForSource(player, "RebirthCount")
     end)
 
+    -- Update essence-based dynamic rewards whenever essences/dark essences change
+    self.AstralProjectionService.Client.EssencesChanged:Connect(function(player)
+        self:_UpdateDynamicRewardsForSource(player, "EssenceCount")
+    end)
+    self.AstralProjectionService.Client.DarkEssencesChanged:Connect(function(player)
+        self:_UpdateDynamicRewardsForSource(player, "DarkEssenceCount")
+    end)
+
     -- Update playtime-based rewards every 60 seconds
     task.spawn(function()
         while true do
@@ -111,6 +121,30 @@ function UpgradeTreeService:KnitStart()
         ["Astral Echoes"] = {
             Get = function(player) return self.AstralEchoService:GetEchoes(player) end,
             Remove = function(player, amount) return self.AstralEchoService:RemoveEchoes(player, amount) end,
+        },
+        Essences = {
+            Get = function(player)
+                local profile = self.DataService:GetProfile(player)
+                return profile and (profile.Data.Essences or 0) or 0
+            end,
+            Remove = function(player, amount)
+                local profile = self.DataService:GetProfile(player)
+                if not profile then return end
+                profile.Data.Essences = (profile.Data.Essences or 0) - amount
+                self.AstralProjectionService.Client.EssencesChanged:Fire(player, profile.Data.Essences)
+            end,
+        },
+        ["Dark Essences"] = {
+            Get = function(player)
+                local profile = self.DataService:GetProfile(player)
+                return profile and (profile.Data.DarkEssences or 0) or 0
+            end,
+            Remove = function(player, amount)
+                local profile = self.DataService:GetProfile(player)
+                if not profile then return end
+                profile.Data.DarkEssences = (profile.Data.DarkEssences or 0) - amount
+                self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, profile.Data.DarkEssences)
+            end,
         },
     }
 
@@ -210,15 +244,16 @@ end
 
 function UpgradeTreeService:CanAffordNode(player, treeName, nodeId)
     local nodeConfig = self:GetNodeConfig(treeName, nodeId)
-    if not nodeConfig or not nodeConfig.Cost then return true end -- no cost = free
+    if not nodeConfig or not nodeConfig.Cost then return true end
 
-    local handler = self.CurrencyHandlers[nodeConfig.Cost.Currency]
-    if not handler then
-        --warn(`Unknown currency: {nodeConfig.Cost.Currency}`)
-        return false
+    -- Support both single cost {Amount, Currency} and array of costs
+    local costs = if type(nodeConfig.Cost[1]) == "table" then nodeConfig.Cost else { nodeConfig.Cost }
+    for _, cost in costs do
+        local handler = self.CurrencyHandlers[cost.Currency]
+        if not handler then return false end
+        if handler.Get(player) < cost.Amount then return false end
     end
-
-    return handler.Get(player) >= nodeConfig.Cost.Amount
+    return true
 end
 
 
@@ -273,11 +308,14 @@ function UpgradeTreeService:UnlockNode(player, treeName, nodeId)
         return false
     end
 
-    -- Deduct cost
+    -- Deduct cost (supports single or array of costs)
     if nodeConfig.Cost then
-        local handler = self.CurrencyHandlers[nodeConfig.Cost.Currency]
-        if handler then
-            handler.Remove(player, nodeConfig.Cost.Amount)
+        local costs = if type(nodeConfig.Cost[1]) == "table" then nodeConfig.Cost else { nodeConfig.Cost }
+        for _, cost in costs do
+            local handler = self.CurrencyHandlers[cost.Currency]
+            if handler then
+                handler.Remove(player, cost.Amount)
+            end
         end
     end
 
@@ -357,6 +395,18 @@ function UpgradeTreeService:ComputeDynamicValue(player, source)
         local echoes = self.AstralEchoService:GetEchoes(player)
         -- formula: 1 + log10(1 + echoes) * 1.4
         return 1 + math.log(1 + echoes, 10) * 1.4
+
+    elseif source == "EssenceCount" then
+        local profile = self.DataService:GetProfile(player)
+        local essences = profile and (profile.Data.Essences or 0) or 0
+        -- formula: 1 + log10(1 + essences) * 1.4
+        return 1 + math.log(1 + essences, 10) * 1.4
+
+    elseif source == "DarkEssenceCount" then
+        local profile = self.DataService:GetProfile(player)
+        local dark = profile and (profile.Data.DarkEssences or 0) or 0
+        -- formula: 1 + log10(1 + dark) * 1.4
+        return 1 + math.log(1 + dark, 10) * 1.4
     end
 
     return 1

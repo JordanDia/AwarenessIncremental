@@ -22,6 +22,11 @@ local DonateService = Knit.CreateService {
 
 -- Fires (player, amount) whenever RobuxSpent is incremented
 DonateService.HasRobuxSpentAdded = Signal.new()
+DonateService.CustomProductHandlers = {} -- [productId] = function(player, dataService)
+
+function DonateService:RegisterProductHandler(productId: number, handler)
+    self.CustomProductHandlers[productId] = handler
+end
 
 -- Build grant handlers from DonateConfig (keyed by ProductId)
 local grantPurchaseHandlerByProductId = {}
@@ -75,6 +80,7 @@ function DonateService:KnitStart()
         local player = Players:GetPlayerByUserId(receiptInfo.PlayerId)
 
         local handler = grantPurchaseHandlerByProductId[receiptInfo.ProductId]
+            or self.CustomProductHandlers[receiptInfo.ProductId]
         if not handler then
             return Enum.ProductPurchaseDecision.NotProcessedYet
         end

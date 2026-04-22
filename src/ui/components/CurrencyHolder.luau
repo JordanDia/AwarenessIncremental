@@ -32,7 +32,7 @@ return function(scope: Fusion.Scope, props)
                     Icon = currency.Icon,
                     TextColor3 = currency.TextColor3,
                     LayoutOrder = currency.LayoutOrder,
-                    Visible = currency.Visible or true,
+                    Visible = currency.Visible,
                 }
             end)
         }

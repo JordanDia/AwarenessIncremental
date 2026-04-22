@@ -4,7 +4,7 @@ return {
     -- NEVER ship with this enabled.
     Enabled = false,
 
-    Multiplier = 1e10,
+    Multiplier = 1e6,
 
     -- Which stats to boost
     Stats = {
@@ -12,7 +12,8 @@ return {
         "Rebirth",
         "CrystalValue",
         "AstralEcho",
-        "Harmony",
+        "Essences",
+        "DarkEssences",
     },
 
 }

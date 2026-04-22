@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SocialService = game:GetService("SocialService")
+local AvatarEditorService = game:GetService("AvatarEditorService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local UIRoot = require(ReplicatedStorage.UI.UIRoot)
@@ -39,12 +40,17 @@ local function PromptPlayerToJoinEvent()
 			return SocialService:PromptRsvpToEventAsync(selectedEvent.Id)
 		end)
 		if not success then
-			warn("RSVP prompt failed:", result)
+			--warn("RSVP prompt failed:", result)
 		end
 	else
-		warn("No future events available to prompt.")
+		--warn("No future events available to prompt.")
 		return
 	end
 end
 
 PromptPlayerToJoinEvent()
+
+
+task.wait(60)
+local gameId = 102479137412335
+AvatarEditorService:PromptSetFavorite(gameId, Enum.AvatarItemType.Asset, true)

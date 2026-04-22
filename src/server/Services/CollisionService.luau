@@ -3,8 +3,9 @@ local PhysicsService = game:GetService("PhysicsService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
-local PLAYER_GROUP = "Players"
-local SPIRIT_GROUP = "Spirit"
+local PLAYER_GROUP       = "Players"
+local SPIRIT_GROUP       = "Spirit"
+local SPIRIT_GROUND_GROUP = "SpiritGround"
 
 local CollisionService = Knit.CreateService {
     Name = "CollisionService",
@@ -17,6 +18,13 @@ function CollisionService:KnitInit()
     PhysicsService:RegisterCollisionGroup(SPIRIT_GROUP)
     PhysicsService:CollisionGroupSetCollidable(SPIRIT_GROUP, "Default", false)
     PhysicsService:CollisionGroupSetCollidable(SPIRIT_GROUP, PLAYER_GROUP, false)
+    PhysicsService:CollisionGroupSetCollidable(SPIRIT_GROUP, SPIRIT_GROUP, false)
+
+    -- SpiritGround: spirits land on it, players pass through it
+    PhysicsService:RegisterCollisionGroup(SPIRIT_GROUND_GROUP)
+    PhysicsService:CollisionGroupSetCollidable(SPIRIT_GROUND_GROUP, "Default", false)
+    PhysicsService:CollisionGroupSetCollidable(SPIRIT_GROUND_GROUP, PLAYER_GROUP, false)
+    -- Spirit↔SpiritGround is collidable by default (no override needed)
 end
 
 local function setCharacterGroup(character: Model)

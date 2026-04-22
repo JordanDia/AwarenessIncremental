@@ -24,6 +24,7 @@ return function(
         BackgroundColor3 = Color3.fromRGB(0, 0, 0),
         BackgroundTransparency = 0.5,
         LayoutOrder = props.LayoutOrder,
+        Visible = props.Visible,
         Parent = props.Parent,
 
         [Fusion.Children] = {

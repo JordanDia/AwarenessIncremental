@@ -140,10 +140,15 @@ function FormatNumberSimpleAPI.Format(value: number, skeleton: string?): string
 	return (formatter :: MainAPI.NumberFormatter):Format(value)
 end
 
+local MAX_FINITE = 1.79e308
 local function toScientificNotation(value: number): string
-	if value ~= value then return "NaN" end
-	if value == math.huge then return "∞" end
-	if value == -math.huge then return "-∞" end
+	if value ~= value then return "0" end
+	if value == math.huge then
+		value = MAX_FINITE
+	end
+	if value == -math.huge then
+		value = -MAX_FINITE
+	end
 	local absVal = math.abs(value)
 	if absVal == 0 then return "0" end
 	local exp = math.floor(math.log10(absVal))
@@ -158,12 +163,13 @@ function FormatNumberSimpleAPI.FormatCompact(value: number, skeleton: string?): 
 
 	assert(type(value) == "number", "Value provided must be a number")
 
-	-- Fall back to scientific notation if value exceeds the suffix table range
-	if value == value and value ~= math.huge and value ~= -math.huge then
-		local absVal = math.abs(value)
-		if absVal > 0 and math.log10(absVal) >= 3 * (#COMPACT_SUFFIX + 1) then
-			return toScientificNotation(value)
-		end
+	-- Fall back to scientific notation if value is non-finite or exceeds the suffix table range
+	if value ~= value or value == math.huge or value == -math.huge then
+		return toScientificNotation(value)
+	end
+	local absVal = math.abs(value)
+	if absVal > 0 and math.log10(absVal) >= 3 * (#COMPACT_SUFFIX + 1) then
+		return toScientificNotation(value)
 	end
 
 	if skeleton == nil then

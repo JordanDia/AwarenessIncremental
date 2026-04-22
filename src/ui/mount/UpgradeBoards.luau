@@ -7,18 +7,20 @@ local scoped = Fusion.scoped
 
 local UpgradeSound: Sound = SoundService:WaitForChild("Upgrade")
 
-local UpgradeFrame    = require("../components/UpgradeFrame")
-local LockedBoard     = require("../components/LockedBoard")
-local RebirthFrame    = require("../components/RebirthFrame")
-local AwakeningFrame  = require("../components/AwakeningFrame")
+local UpgradeFrame           = require("../components/UpgradeFrame")
+local LockedBoard            = require("../components/LockedBoard")
+local RebirthFrame           = require("../components/RebirthFrame")
+local AwakeningFrame         = require("../components/AwakeningFrame")
+local SpawnDarkSpiritFrame   = require("../components/SpawnDarkSpiritFrame")
 
 return function(parent)
 
     local scope = scoped(Fusion, {
-        UpgradeFrame   = UpgradeFrame,
-        LockedBoard    = LockedBoard,
-        RebirthFrame   = RebirthFrame,
-        AwakeningFrame = AwakeningFrame,
+        UpgradeFrame          = UpgradeFrame,
+        LockedBoard           = LockedBoard,
+        RebirthFrame          = RebirthFrame,
+        AwakeningFrame        = AwakeningFrame,
+        SpawnDarkSpiritFrame  = SpawnDarkSpiritFrame,
     })
 
     local DataService         = Knit.GetService("DataService") 
@@ -27,7 +29,8 @@ return function(parent)
     local AwakeningService    = Knit.GetService("AwakeningService")
     local AwarenessService    = Knit.GetService("AwarenessService")
     local CrystalService      = Knit.GetService("CrystalService")
-    local AstralEchoService   = Knit.GetService("AstralEchoService")
+    local AstralEchoService          = Knit.GetService("AstralEchoService")
+    local AstralProjectionService    = Knit.GetService("AstralProjectionService")
     local UnlockService       = Knit.GetService("UnlockService")
     local UpgradeTreeService  = Knit.GetService("UpgradeTreeService")
 
@@ -38,6 +41,8 @@ return function(parent)
     local tree1Node9Purchased = scope:Value(UpgradeTreeService:IsNodePurchased("Tree1", "1-9"))
     -- awakeningLevel: reactive awakening level (unlocks Veil / AstralEcho boards at >= 1)
     local awakeningLevel = scope:Value(AwakeningService:GetLevel())
+    -- eliteSpiritSpawnerUnlocked: true once node 3-5 is purchased (unlocks SpawnDarkSpirit + spirit upgrade boards)
+    local eliteSpiritSpawnerUnlocked = scope:Value(UnlockService:IsUnlocked("EliteSpiritSpawner"))
 
     -- Update lock states when tree nodes are purchased
     UpgradeTreeService.NodeUnlocked:Connect(function(treeName, nodeId)
@@ -47,11 +52,15 @@ return function(parent)
         if treeName == "Tree1" and nodeId == "1-9" then
             tree1Node9Purchased:set(true)
         end
+        if treeName == "Tree3" and nodeId == "3-5" then
+            eliteSpiritSpawnerUnlocked:set(true)
+        end
     end)
 
     DataService.DataLoaded:Connect(function(data)
         crystalUnlocked:set(UnlockService:IsUnlocked("CrystalCollection"))
         tree1Node9Purchased:set(UpgradeTreeService:IsNodePurchased("Tree1", "1-9"))
+        eliteSpiritSpawnerUnlocked:set(UnlockService:IsUnlocked("EliteSpiritSpawner"))
     end)
 
     -- Update awakening level whenever it changes (also used later for the awakening board)
@@ -60,6 +69,7 @@ return function(parent)
         -- Re-check unlock states that get revoked on awakening
         crystalUnlocked:set(UnlockService:IsUnlocked("CrystalCollection"))
         tree1Node9Purchased:set(UpgradeTreeService:IsNodePurchased("Tree1", "1-9"))
+        eliteSpiritSpawnerUnlocked:set(UnlockService:IsUnlocked("EliteSpiritSpawner"))
     end)
 
     -- ── Reactive currency balances (for CanAfford) ─────────────────────────
@@ -68,6 +78,8 @@ return function(parent)
         Crystals         = scope:Value(CrystalService:GetCrystals()),
         Rebirths         = scope:Value(RebirthService:GetRebirths()),
         ["Astral Echoes"] = scope:Value(AstralEchoService:GetEchoes()),
+        Essences          = scope:Value(AstralProjectionService:GetEssences()),
+        ["Dark Essences"] = scope:Value(AstralProjectionService:GetDarkEssences()),
     }
 
     AwarenessService.AwarenessChanged:Connect(function(amount)
@@ -81,6 +93,12 @@ return function(parent)
     end)
     AstralEchoService.EchoesChanged:Connect(function(amount)
         currencyBalances["Astral Echoes"]:set(amount)
+    end)
+    AstralProjectionService.EssencesChanged:Connect(function(essences)
+        currencyBalances.Essences:set(essences)
+    end)
+    AstralProjectionService.DarkEssencesChanged:Connect(function(dark)
+        currencyBalances["Dark Essences"]:set(dark)
     end)
 
     -- ── Board factory ──────────────────────────────────────────────────────
@@ -207,6 +225,14 @@ return function(parent)
     local veilAndEchoLocked = scope:Computed(function(use)
         return use(awakeningLevel) < 1
     end)
+    -- spiritBoardLocked: locked until node 3-5 (EliteSpiritSpawner) is purchased
+    local spiritBoardLocked = scope:Computed(function(use)
+        return not use(eliteSpiritSpawnerUnlocked)
+    end)
+    -- awakening6Locked: locked until player reaches Awakening level 6
+    local awakening6Locked = scope:Computed(function(use)
+        return use(awakeningLevel) < 6
+    end)
 
     -- ── Awareness upgrade boards (no lock requirement) ─────────────────────
     local upgradeBoards = {
@@ -296,6 +322,20 @@ return function(parent)
             "Astral Echoes",
             veilAndEchoLocked
         ),
+        MakeUpgradeBoard("SpiritDamage",
+            workspace.UpgradeBoards:WaitForChild("SpiritDamage"),
+            "Spirit Damage",
+            "rbxassetid://87766693277427",
+            "Essences",
+            awakening6Locked
+        ),
+        MakeUpgradeBoard("EssenceValue",
+            workspace.UpgradeBoards:WaitForChild("EssenceValue"),
+            "Essence Value",
+            "rbxassetid://87766693277427",
+            "Dark Essences",
+            spiritBoardLocked
+        ),
     }
 
     local rebirthUpgradeBoards = {
@@ -315,6 +355,12 @@ return function(parent)
         elseif board.LockState == veilAndEchoLocked then
             rewardText      = "Astral Echo Upgrades"
             requirementText = "Reach Awakening Level 1"
+        elseif board.LockState == spiritBoardLocked then
+            rewardText      = "Spirit Upgrades"
+            requirementText = "Unlock Dark Spirit Spawner\n(Upgrade Tree 3-5)"
+        elseif board.LockState == awakening6Locked then
+            rewardText      = "Spirit Damage"
+            requirementText = "Reach Awakening Level 6"
         end
         MountUpgradeGui(board, rewardText, requirementText)
     end
@@ -404,6 +450,62 @@ return function(parent)
                 Awareness      = awarenessValue,
                 OnAwaken       = function()
                     AwakeningService:Awaken()
+                end,
+            }
+        }
+    }
+
+    -- ── Spawn Dark Spirit board ───────────────────────────────────────────
+    local initSummons, initMaxSummons, initNextRegen = AstralProjectionService:GetSummons()
+    local summonsValue       = scope:Value(initSummons)
+    local maxSummonsValue    = scope:Value(initMaxSummons)
+    local nextRegenTimeValue = scope:Value(initNextRegen)
+
+    AstralProjectionService.SummonsChanged:Connect(function(summons, maxSummons, nextRegen)
+        summonsValue:set(summons)
+        maxSummonsValue:set(maxSummons)
+        nextRegenTimeValue:set(nextRegen)
+    end)
+
+    local DonateService = Knit.GetService("DonateService")
+
+    local spawnDarkSpiritPart = workspace:WaitForChild("SpawnDarkSpirit")
+
+    scope:New "SurfaceGui" {
+        Name    = "SpawnDarkSpiritBoard_Locked",
+        Adornee = spawnDarkSpiritPart,
+        Face    = Enum.NormalId.Front,
+        Parent  = parent,
+        Enabled = scope:Computed(function(use) return use(spiritBoardLocked) end),
+        [Fusion.Children] = {
+            scope:LockedBoard {
+                RewardText      = "Dark Spirit Summoning",
+                RequirementText = "Unlock Dark Spirit Spawner\n(Upgrade Tree 3-5)",
+            }
+        }
+    }
+
+    scope:New "SurfaceGui" {
+        Name    = "SpawnDarkSpiritBoard",
+        Adornee = spawnDarkSpiritPart,
+        Face    = Enum.NormalId.Front,
+        Parent  = parent,
+        Enabled = scope:Computed(function(use) return not use(spiritBoardLocked) end),
+        [Fusion.Children] = {
+            scope:SpawnDarkSpiritFrame {
+                Essences     = currencyBalances.Essences,
+                Awareness    = currencyBalances.Awareness,
+                Crystals     = currencyBalances.Crystals,
+                AstralEchoes = currencyBalances["Astral Echoes"],
+                Rebirths     = currencyBalances.Rebirths,
+                Summons        = summonsValue,
+                MaxSummons     = maxSummonsValue,
+                NextSummonRegen = nextRegenTimeValue,
+                OnSpawn      = function()
+                    AstralProjectionService:SpawnDarkSpirit()
+                end,
+                OnBuyMaxSummons = function()
+                    DonateService:PromptDonate(3578003439)
                 end,
             }
         }

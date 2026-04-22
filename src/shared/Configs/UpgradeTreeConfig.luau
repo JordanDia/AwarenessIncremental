@@ -272,4 +272,130 @@ return {
         },
     },
 
+    -- Tree3: Essence/Dark Essence tree. Root unlocked after reaching Awakening Level 2 (TBD).
+    Tree3 = {
+        -- ── Root ─────────────────────────────────────────────────────────────
+        {
+            NodeId      = "3-1",
+            Unlocks     = { "3-2" },
+            Rewards     = { { Type = "Multiplier", Stat = "Essences", Value = 2 } },
+            Title       = "Upgrade: 3-1",
+            UpgradeName = "2x Essences",
+            Cost        = { Amount = 50, Currency = "Essences" },
+        },
+
+        -- ── Row 2 ─────────────────────────────────────────────────────────────
+        {
+            NodeId      = "3-2",
+            Unlocks     = { "3-3", "3-4", "3-5" },
+            Rewards     = { { Type = "Multiplier", Stat = "Awareness", Value = 2 } },
+            Title       = "Upgrade: 3-2",
+            UpgradeName = "2x Awareness",
+            Cost        = { Amount = 150, Currency = "Essences" },
+        },
+
+        {
+            NodeId      = "3-3",
+            Unlocks     = { "3-6" },
+            Rewards     = { { Type = "Multiplier", Stat = "AstralEcho", Value = 5 } },
+            Title       = "Upgrade: 3-3",
+            UpgradeName = "5x Astral Echoes",
+            Cost        = { Amount = 1e9, Currency = "Astral Echoes" },
+        },
+
+        {
+            NodeId      = "3-4",
+            Unlocks     = { "3-7" },
+            Rewards     = { { Type = "Dynamic", Stat = "Awareness", Source = "EssenceCount" } },
+            Title       = "Upgrade: 3-4",
+            UpgradeName = "Awareness boosted by Essences",
+            Cost        = { Amount = 200, Currency = "Essences" },
+        },
+
+        -- ── Row 3 ─────────────────────────────────────────────────────────────
+        {
+            NodeId      = "3-5",
+            Unlocks     = { "3-10" },
+            Rewards     = { { Type = "Unlock", Value = "EliteSpiritSpawner" } },
+            Title       = "Upgrade: 3-5",
+            UpgradeName = "Unlock Dark Spirit Spawner",
+            Cost        = { Amount = 500, Currency = "Essences" },
+        },
+
+        {
+            NodeId      = "3-6",
+            Unlocks     = { "3-8", "3-11" },
+            Rewards     = { { Type = "Unlock", Value = "AutoBuyAstralEcho" } },
+            Title       = "Upgrade: 3-6",
+            UpgradeName = "Auto Buy Astral Echo Upgrades",
+            Cost        = { Amount = 300, Currency = "Essences" },
+        },
+
+        {
+            NodeId      = "3-7",
+            Unlocks     = { "3-9", "3-12" },
+            Rewards     = { { Type = "Multiplier", Stat = "Awareness", Value = 3 } },
+            Title       = "Upgrade: 3-7",
+            UpgradeName = "3x Awareness",
+            Cost        = { Amount = 300, Currency = "Essences" },
+        },
+
+        -- ── Row 4 ─────────────────────────────────────────────────────────────
+        {
+            NodeId      = "3-8",
+            Unlocks     = {},
+            Rewards     = { { Type = "Multiplier", Stat = "AstralEcho", Value = 3 } },
+            Title       = "Upgrade: 3-8",
+            UpgradeName = "3x Astral Echoes",
+            Cost        = { Amount = 800, Currency = "Essences" },
+        },
+
+        {
+            NodeId      = "3-9",
+            Unlocks     = {},
+            Rewards     = { { Type = "Multiplier", Stat = "SpiritDamage", Value = 2 } },
+            Title       = "Upgrade: 3-9",
+            UpgradeName = "2x Spirit Damage",
+            Cost        = { Amount = 2_000, Currency = "Essences" },
+        },
+
+        {
+            NodeId      = "3-10",
+            Unlocks     = { "3-13" },
+            Rewards     = { { Type = "Dynamic", Stat = "Awareness", Source = "DarkEssenceCount" } },
+            Title       = "Upgrade: 3-10",
+            UpgradeName = "Awareness boosted by Dark Essences",
+            Cost        = { Amount = 10, Currency = "Dark Essences" },
+        },
+
+        -- ── Row 5 (top) ───────────────────────────────────────────────────────
+        {
+            NodeId      = "3-11",
+            Unlocks     = {},
+            Rewards     = { { Type = "Dynamic", Stat = "Rebirth", Source = "EssenceCount" } },
+            Title       = "Upgrade: 3-11",
+            UpgradeName = "Rebirths boosted by Essences",
+            Cost        = { Amount = 5_000, Currency = "Essences" },
+        },
+
+        {
+            NodeId      = "3-12",
+            Unlocks     = {},
+            Rewards     = { { Type = "Multiplier", Stat = "DarkEssences", Value = 2 } },
+            Title       = "Upgrade: 3-12",
+            UpgradeName = "2x Dark Essences",
+            Cost        = { Amount = 15, Currency = "Dark Essences" },
+                
+        },
+
+        {
+            NodeId      = "3-13",
+            Unlocks     = {},
+            Rewards     = { { Type = "Multiplier", Stat = "Awareness", Value = 5 } },
+            Title       = "Upgrade: 3-13",
+            UpgradeName = "5x Awareness",
+            Cost        = { Amount = 1e21, Currency = "Awareness" },
+        },
+    },
+
 }

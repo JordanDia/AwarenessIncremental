@@ -82,7 +82,12 @@ function MultiplierService:GetMultiplier(player: Player, stat: string): number
 
     local result = 1
     for _, value in playerTable[stat] do
+        if value ~= value or value == math.huge then continue end
         result *= value
+        if result == math.huge then
+            result = 1e300
+            break
+        end
     end
 
     return result

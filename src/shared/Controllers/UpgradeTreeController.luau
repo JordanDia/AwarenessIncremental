@@ -14,12 +14,44 @@ local CURRENCY_COLORS = {
     ["Astral Echoes"] = Color3.fromRGB(0,   200, 160),
 }
 
+local GATED_TREES = {
+    Tree3 = 6, -- requires Awakening level 6
+}
+
 local UpgradeTreeController = Knit.CreateController {
     Name = "UpgradeTreeController"
 }
 
+function UpgradeTreeController:_SetTreeVisible(treeName, visible)
+    local treeFolder = workspace.UpgradeTrees:FindFirstChild(treeName)
+    if not treeFolder then return end
+    if visible then
+        -- Let UpdateTreeVisuals restore correct per-node state
+        self:UpdateTreeVisuals()
+    else
+        -- Hide every part and GUI in the tree entirely
+        for _, obj in treeFolder:GetDescendants() do
+            if obj:IsA("BasePart") then
+                obj.Transparency = 1
+                obj.CanCollide   = false
+            elseif obj:IsA("SurfaceGui") then
+                obj.Enabled = false
+            end
+        end
+    end
+end
+
+function UpgradeTreeController:_UpdateGatedTreeVisibility()
+    for treeName, requiredLevel in GATED_TREES do
+        local visible = self._awakeningLevel >= requiredLevel
+        self:_SetTreeVisible(treeName, visible)
+    end
+end
+
 function UpgradeTreeController:KnitStart()
     self.UpgradeTreeService = Knit.GetService("UpgradeTreeService")
+    self.AwakeningService   = Knit.GetService("AwakeningService")
+    self._awakeningLevel    = self.AwakeningService:GetLevel()
     -- Local cache of unlocked/purchased state — avoids per-node remote calls on each visual refresh
     self.NodeState = { unlocked = {}, purchased = {} }
     -- Reactive cost Values keyed by "treeName_nodeId" — allows flipping text to "Purchased"
@@ -32,10 +64,17 @@ function UpgradeTreeController:KnitStart()
         self:FetchAndRefresh()
     end)
 
+    -- Track awakening level so gated trees show/hide immediately on level-up
+    self.AwakeningService.AwakeningLevelChanged:Connect(function(newLevel)
+        self._awakeningLevel = newLevel
+        self:_UpdateGatedTreeVisibility()
+    end)
+
     -- Trees are ready: build GUIs then fetch initial state
     self.UpgradeTreeService.TreeInitialized:Connect(function()
         self:SetupNodeGuis()
         self:FetchAndRefresh()
+        self:_UpdateGatedTreeVisibility()
     end)
 
     -- Node purchased: update local state immediately (no server round-trip)
@@ -54,6 +93,7 @@ function UpgradeTreeController:KnitStart()
     end)
 
     self:SetupNodeGuis()
+    self:_UpdateGatedTreeVisibility()
 end
 
 -- Fetch full unlocked/purchased + current dynamic values from server, then refresh visuals
@@ -118,10 +158,19 @@ function UpgradeTreeController:CreateNodeGui(treeName, touchPart, nodeConfig)
         Enabled = false,
     }
 
-    local costText = nodeConfig.Cost and string.format("%s %s",
-        FormatNumber(nodeConfig.Cost.Amount),
-        nodeConfig.Cost.Currency
-    ) or "Free"
+    local costText
+    if not nodeConfig.Cost then
+        costText = "Free"
+    elseif type(nodeConfig.Cost[1]) == "table" then
+        -- Array of costs (e.g. dual-currency node)
+        local parts = {}
+        for _, c in nodeConfig.Cost do
+            table.insert(parts, string.format("%s %s", FormatNumber(c.Amount), c.Currency))
+        end
+        costText = table.concat(parts, " + ")
+    else
+        costText = string.format("%s %s", FormatNumber(nodeConfig.Cost.Amount), nodeConfig.Cost.Currency)
+    end
 
     local costValue = scope:Value(costText)
     self.NodeCostValues[treeName .. "_" .. nodeConfig.NodeId] = costValue
@@ -149,7 +198,9 @@ function UpgradeTreeController:SetupNodeGuis()
             local touchPart = nodeModel:WaitForChild("TouchPart")
             if not touchPart then continue end
 
-            local currency = nodeConfig.Cost and nodeConfig.Cost.Currency
+            local currency = nodeConfig.Cost and (
+                type(nodeConfig.Cost[1]) == "table" and nodeConfig.Cost[1].Currency or nodeConfig.Cost.Currency
+            )
             local color = currency and CURRENCY_COLORS[currency]
             if color then
                 touchPart.Color = color
@@ -225,6 +276,12 @@ function UpgradeTreeController:UpdateTreeVisuals()
     for treeName, config in pairs(UpgradeTreeConfig) do
         local treeFolder = workspace.UpgradeTrees:FindFirstChild(treeName)
         if not treeFolder then continue end
+
+        -- Skip (and keep hidden) any tree the player hasn't unlocked yet
+        local requiredLevel = GATED_TREES[treeName]
+        if requiredLevel and self._awakeningLevel < requiredLevel then
+            continue
+        end
 
         local unlockedMap = self.NodeState.unlocked[treeName] or {}
 
