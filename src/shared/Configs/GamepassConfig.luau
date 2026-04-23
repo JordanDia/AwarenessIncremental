@@ -62,4 +62,14 @@ return {
         PartName    = "2xXP",
         Color       = Color3.fromRGB(50, 140, 230),
     },
+    {
+        Name        = "2x Essence",
+        Description = "Double all Essences collected permanently!",
+        PassId      = 1800604793,
+        Stat        = "Essences",
+        Value       = 2,
+        Icon        = "rbxassetid://128072050393886",
+        PartName    = "2xEssence",
+        Color       = Color3.fromRGB(200, 150, 255),
+    },
 }

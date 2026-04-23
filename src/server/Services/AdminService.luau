@@ -14,6 +14,8 @@ local STAT_MAP = {
 	astralEchoes= { key = "AstralEchoes", total = "AstralEchoesTotal" },
 	echoes      = { key = "AstralEchoes", total = "AstralEchoesTotal" },
 	crystals    = { key = "Crystals",     total = "CrystalsTotal" },
+	essences	= { key = "Essences",	  total = "EssencesTotal" },
+	darkessences	= { key = "DarkEssences",	  total = "DarkEssencesTotal" },
 }
 
 local function resolveStatEntry(alias)

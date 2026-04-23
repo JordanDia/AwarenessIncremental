@@ -24,13 +24,21 @@ local PROFILE_TEMPLATE = {
 	Rebirths = 0,
 	Crystals = 0,
 	AstralEchoes = 0,
+	Essences = 0,
+	DarkEssences = 0,
 	AwakeningLevel = 0,
+
+	Summons = 1,
+	MaxSummons = 1,
+	SummonRegenQueue = {}, -- array of os.time() Unix timestamps, one per consumed summon slot
 
 	AwarenessTotal = 0,
 	RebirthsTotal = 0,
 	CrystalsTotal = 0,
 	AstralEchoesTotal = 0,
-	
+	EssencesTotal = 0,
+	DarkEssencesTotal = 0,
+
 	XP = 0,
 	Level = 1,
 	PlaytimeSeconds = 0,
@@ -57,6 +65,9 @@ local PROFILE_TEMPLATE = {
 		AstralEchoMultiplyRebirth = 1,
 		AstralEchoValue = 1,
 		VeilDuration = 1,
+
+		SpiritDamage = 1,
+		EssenceValue = 1,
 	},
 
 	RebirthUpgrades = {
@@ -72,12 +83,14 @@ local PROFILE_TEMPLATE = {
 
 		Tree1 = {},
 		Tree2 = {}, -- locked until Awakening Level 1
+		Tree3 = {}, -- locked until Awakening Level 2 (TBD)
     },
 
 	PurchasedNodes = {
 
 		Tree1 = {},
 		Tree2 = {},
+		Tree3 = {},
 	},
 
 	Unlocks = {},
@@ -106,6 +119,12 @@ local PROFILE_TEMPLATE = {
 	},
 
 	Boosts = {},
+
+	-- Last known position for same-session respawn (cleared after use or after 1 hour)
+	LastPositionX    = nil,
+	LastPositionY    = nil,
+	LastPositionZ    = nil,
+	LastPositionTime = 0,
 
 }
 
@@ -161,6 +180,20 @@ function DataService:LoadPlayer(player: Player)
 	end
 end
 
+-- Recursively replace any non-JSON-safe numbers (inf, -inf, NaN) before saving.
+-- DataStore serializes via JSON; `inf` becomes invalid and the key is dropped on reload.
+local function sanitizeForSave(tbl)
+	for k, v in tbl do
+		if type(v) == "number" then
+			if v ~= v or v == math.huge or v == -math.huge then
+				tbl[k] = 0
+			end
+		elseif type(v) == "table" then
+			sanitizeForSave(v)
+		end
+	end
+end
+
 function DataService:PlayerRemoving(player: Player)
 	local profile = DataService.Profiles[player]
 	if profile ~= nil then
@@ -168,7 +201,7 @@ function DataService:PlayerRemoving(player: Player)
 		if CLEAR_DATA_ON_LEAVE and RunService:IsStudio() then
 			profile.Data = {}
 		end
-		
+		sanitizeForSave(profile.Data)
 		profile:EndSession()
 	end
 end

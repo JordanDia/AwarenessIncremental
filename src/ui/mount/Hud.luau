@@ -7,6 +7,8 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local scoped = Fusion.scoped
 
+local HudProximityConfig = require(ReplicatedStorage.Shared.Configs.HudProximityConfig)
+
 local CurrencyHolder = require("../components/CurrencyHolder")
 local CurrencyFrame = require("../components/CurrencyFrame")
 local LevelBar = require("../components/LevelBar")
@@ -49,6 +51,7 @@ return function(parent)
     local RebirthService = Knit.GetService("RebirthService")
     local CrystalService = Knit.GetService("CrystalService")
     local AstralEchoService = Knit.GetService("AstralEchoService")
+    local AstralProjectionService = Knit.GetService("AstralProjectionService")
     local HarmonyService = Knit.GetService("HarmonyService")
     local LevelService = Knit.GetService("LevelService")
     local DonateService = Knit.GetService("DonateService")
@@ -60,6 +63,8 @@ return function(parent)
     local crystalValue = scope:Value(CrystalService:GetCrystals())
     local echoValue = scope:Value(AstralEchoService:GetEchoes())
     local harmonyValue = scope:Value(HarmonyService:GetHarmony())
+    local essencesValue     = scope:Value(AstralProjectionService:GetEssences())
+    local darkEssencesValue = scope:Value(AstralProjectionService:GetDarkEssences())
 
     -- Lifetime totals for the profile panel
     local awarnessTotalValue = scope:Value(0)
@@ -75,6 +80,7 @@ return function(parent)
         crystalValue:set(data.Crystals)
         echoValue:set(data.AstralEchoes or 0)
         harmonyValue:set(data.Harmony or 0)
+        essencesValue:set(data.Essences or 0)
         awarnessTotalValue:set(data.AwarenessTotal or 0)
         rebirthsTotalValue:set(data.RebirthsTotal or 0)
         crystalsTotalValue:set(data.CrystalsTotal or 0)
@@ -124,6 +130,14 @@ return function(parent)
         harmonyValue:set(harmony)
     end)
 
+    AstralProjectionService.EssencesChanged:Connect(function(essences)
+        essencesValue:set(essences)
+    end)
+
+    AstralProjectionService.DarkEssencesChanged:Connect(function(dark)
+        darkEssencesValue:set(dark)
+    end)
+
     -- Fetch first session time and format as readable date
     task.spawn(function()
         local MONTHS = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"}
@@ -146,7 +160,7 @@ return function(parent)
 
     -- Function to update level UI
     local function UpdateLevelUI()
-        local level = LevelService:GetLevel()
+        local _currentLevel = LevelService:GetLevel()
         local xp = LevelService:GetXPProgress()
 
         levelValue:set(level)
@@ -161,10 +175,15 @@ return function(parent)
     LevelService.XPChanged:Connect(UpdateLevelUI)
 
     -- Listen for level changes
-    LevelService.LevelChanged:Connect(function(newLevel, oldLevel)
+    LevelService.LevelChanged:Connect(function()
         UpdateLevelUI()
-        --print(`Level up! {oldLevel} -> {newLevel}`)
     end)
+
+    -- Build proximity visibility Values before the currencies table references them
+    local proximityVisible = {}
+    for frameName in HudProximityConfig do
+        proximityVisible[frameName] = scope:Value(false)
+    end
 
     local currencies = scope:Value {
 
@@ -192,7 +211,7 @@ return function(parent)
             Icon = "rbxassetid://78458877619165",
             TextColor3 = Color3.fromRGB(132, 0, 255),
             LayoutOrder = 80,
-            Visible = scope:Value(true),
+            Visible = proximityVisible.CrystalFrame,
         },
 
         {
@@ -201,17 +220,27 @@ return function(parent)
             Icon = "rbxassetid://118132965740444",
             TextColor3 = Color3.fromRGB(0, 210, 200),
             LayoutOrder = 70,
-            Visible = scope:Value(true),
+            Visible = proximityVisible.AstralEchoFrame,
         },
 
-        -- {
-        --     Name = "HarmonyFrame",
-        --     Value = harmonyValue,
-        --     Icon = "rbxassetid://70601939887941", -- TODO: replace with a Harmony icon
-        --     TextColor3 = Color3.fromRGB(55, 210, 95),
-        --     LayoutOrder = 60,
-        --     Visible = scope:Value(true),
-        -- },
+        {
+            Name = "EssencesFrame",
+            Value = essencesValue,
+            Icon = "rbxassetid://128072050393886",
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            LayoutOrder = 60,
+            Visible = proximityVisible.EssencesFrame,
+        },
+
+        {
+            Name = "DarkEssencesFrame",
+            Value = darkEssencesValue,
+            Icon = "rbxassetid://120990518216037",
+            TextColor3 = Color3.fromRGB(255, 0, 0),
+            LayoutOrder = 50,
+            Visible = proximityVisible.DarkEssencesFrame,
+        },
+
 
     }
 
@@ -280,8 +309,32 @@ return function(parent)
         isInAutoCollectGroup = ok and result
     end)
 
-    -- Proximity check for CrystalSpawn visibility
-    local crystalSpawn = workspace:WaitForChild("CrystalSpawn")
+    -- Resolve workspace parts for each proximity rule via WaitForChild path traversal
+    local proximityParts = {}
+    task.spawn(function()
+        for frameName, cfg in HudProximityConfig do
+            local current: Instance = workspace
+            local ok = true
+            for _, name in cfg.Path do
+                local child = current:WaitForChild(name, 10)
+                if not child then
+                    warn("[HudProximity] Could not find '" .. name .. "' under " .. current:GetFullName())
+                    ok = false
+                    break
+                end
+                current = child
+            end
+            if ok then
+                proximityParts[frameName] = { part = current, radius = cfg.Radius }
+            else
+                proximityVisible[frameName]:set(true)
+            end
+        end
+    end)
+
+    -- Proximity check for CrystalSpawn visibility (auto-collect button)
+    -- and all gated currency frames
+    local crystalSpawn    = workspace:WaitForChild("CrystalSpawn")
     local crystalSpawnPos = crystalSpawn.Position
 
     local elapsed = 0
@@ -292,15 +345,22 @@ return function(parent)
 
         local character = Players.LocalPlayer.Character
         local root = character and character:FindFirstChild("HumanoidRootPart")
-        local inRange = root and (root.Position - crystalSpawnPos).Magnitude <= AUTO_COLLECT_RADIUS
+        local rootPos = root and root.Position
 
+        -- Auto-collect button proximity
+        local inRange = rootPos and (rootPos - crystalSpawnPos).Magnitude <= AUTO_COLLECT_RADIUS
         if not inRange and Fusion.peek(autoCollectActive) then
-            -- Left the zone while active — turn it off
             autoCollectActive:set(false)
             CrystalController:StopAutoCollect()
         end
-
         autoCollectVisible:set(inRange and true or false)
+
+        -- Currency frame proximity
+        for frameName, entry in proximityParts do
+            local partPos = entry.part.Position
+            local visible = rootPos and (rootPos - partPos).Magnitude <= entry.radius
+            proximityVisible[frameName]:set(visible and true or false)
+        end
     end)
 
     -- Fetch initial boost state so we don't miss a boost that fired before we connected

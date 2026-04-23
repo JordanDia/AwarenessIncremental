@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
+local Players           = game:GetService("Players")
+local AnalyticsService  = game:GetService("AnalyticsService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -24,12 +25,19 @@ local AUTO_BUY_GATED = {
         "CrystalAwarenessMultiplier",
         "CrystalRebirthMultiplier",
     }},
+    { unlock = "AutoBuyAstralEcho", upgrades = {
+        "AstralEchoMultiplyAwareness",
+        "AstralEchoMultiplyRebirth",
+        "AstralEchoValue",
+        "VeilDuration",
+    }},
 }
 
 local AwakeningService = Knit.CreateService {
     Name = "AwakeningService",
     Client = {
-        AwakeningLevelChanged = Knit.CreateSignal(), -- fires (newLevel: number)
+        AwakeningLevelChanged        = Knit.CreateSignal(), -- fires (newLevel: number)
+        AstralProjectionBeamChanged  = Knit.CreateSignal(), -- fires (visible: boolean)
     }
 }
 
@@ -59,6 +67,13 @@ function AwakeningService:KnitStart()
         -- Tree2's root node here to ensure it's visible after any awakening + rejoin.
         if self:GetLevel(player) >= 1 then
             self.UpgradeTreeService:UnlockTreeRoot(player, "Tree2")
+        end
+        -- Restore astral projection tutorial beam if they qualify but haven't projected yet
+        local profile = self.DataService:GetProfile(player)
+        if profile and self:GetLevel(player) >= 6 and not profile.Data.Analytics_FirstAstralProjection then
+            task.defer(function()
+                self.Client.AstralProjectionBeamChanged:Fire(player, true)
+            end)
         end
     end
 
@@ -170,6 +185,17 @@ function AwakeningService:Awaken(player)
     end
 
     self.AwakeningLevelChanged:Fire(player, newLevel)
+
+    -- First time reaching Awakening 6: log funnel and show the astral projection beam
+    if newLevel == 6 and not profile.Data.Analytics_ReachedAwakening6 then
+        profile.Data.Analytics_ReachedAwakening6 = true
+        pcall(function()
+            AnalyticsService:LogFunnelStepEvent(player, "PlayerProgression", tostring(player.UserId), 4, "Reached Awakening Level 6")
+        end)
+    end
+    if newLevel >= 6 and not profile.Data.Analytics_FirstAstralProjection then
+        self.Client.AstralProjectionBeamChanged:Fire(player, true)
+    end
 
     return true
 end

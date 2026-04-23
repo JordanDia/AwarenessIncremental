@@ -161,7 +161,7 @@ function AstralEchoController:SpawnEcho()
     startDrifting(echoPart, spawnCF.Position)
 end
 
-local CHASE_SPEED     = 40  -- studs per second toward player
+local CHASE_SPEED     = 50  -- studs per second toward player
 local COLLECT_DIST    = 1.5 -- studs — collected when this close
 
 -- Called when the echo enters the player's collection radius

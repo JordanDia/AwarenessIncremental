@@ -36,6 +36,7 @@ function UpgradeService:KnitStart()
 	self.CrystalService = Knit.GetService("CrystalService")
 	self.AstralEchoService = Knit.GetService("AstralEchoService")
 	self.MultiplierService = Knit.GetService("MultiplierService")
+	self.AstralProjectionService = Knit.GetService("AstralProjectionService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         if not profile then return end
@@ -131,6 +132,20 @@ function UpgradeService:BuyUpgrade(player, upgradeId)
 			self.AstralEchoService:RemoveEchoes(player, cost)
 			canAfford = true
 		end
+	elseif config.Currency == "Essences" then
+		local essences = profile and (profile.Data.Essences or 0) or 0
+		if essences >= cost then
+			profile.Data.Essences = essences - cost
+			self.AstralProjectionService.Client.EssencesChanged:Fire(player, profile.Data.Essences)
+			canAfford = true
+		end
+	elseif config.Currency == "Dark Essences" then
+		local dark = profile and (profile.Data.DarkEssences or 0) or 0
+		if dark >= cost then
+			profile.Data.DarkEssences = dark - cost
+			self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, profile.Data.DarkEssences)
+			canAfford = true
+		end
 	end
 
 	if not canAfford then
@@ -173,6 +188,10 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 		currentCurrency = self.CrystalService:GetCrystals(player)
 	elseif config.Currency == "AstralEchoes" then
 		currentCurrency = self.AstralEchoService:GetEchoes(player)
+	elseif config.Currency == "Essences" then
+		currentCurrency = profile.Data.Essences or 0
+	elseif config.Currency == "Dark Essences" then
+		currentCurrency = profile.Data.DarkEssences or 0
 	end
 
 	-- Calculate how many levels we can buy
@@ -212,6 +231,12 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 			self.CrystalService:RemoveCrystals(player, totalCost)
 		elseif config.Currency == "AstralEchoes" then
 			self.AstralEchoService:RemoveEchoes(player, totalCost)
+		elseif config.Currency == "Essences" then
+			profile.Data.Essences = (profile.Data.Essences or 0) - totalCost
+			self.AstralProjectionService.Client.EssencesChanged:Fire(player, profile.Data.Essences)
+		elseif config.Currency == "Dark Essences" then
+			profile.Data.DarkEssences = (profile.Data.DarkEssences or 0) - totalCost
+			self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, profile.Data.DarkEssences)
 		end
 
 		-- Update level once
@@ -355,7 +380,7 @@ function UpgradeService.Client:GetNextCost(player, upgradeId)
     return self.Server:GetNextCost(player, upgradeId)
 end
 
-function UpgradeService.Client:GetMaxLevel(player, upgradeId)
+function UpgradeService.Client:GetMaxLevel(_player, upgradeId)
     return self.Server:GetMaxLevel(upgradeId)
 end
 

@@ -249,7 +249,7 @@ return {
 
     VeilDuration = {
         Name = "Veil Duration",
-        Description = "Increase how long the Veil lasts (+1 second per level)",
+        Description = "Increase how long the Veil lasts",
         MaxLevel = 15,
         Category = "Upgrades",
         Currency = "AstralEchoes",
@@ -260,6 +260,39 @@ return {
             local base = 1
             local growth = 1.35
             return math.floor(base * (growth ^ level))
+        end,
+    },
+
+    SpiritDamage = {
+        Name = "Spirit Damage",
+        Description = "",
+        MaxLevel = 75,
+        Category = "Upgrades",
+        Currency = "Essences",
+        EffectPerLevel = function(level)
+            local value = 3 + level * 0.1
+            return math.round(value * 100) / 100
+        end,
+        CostFunc = function(level)
+            -- local base = 1
+            -- local growth = 1.15
+            -- return math.floor(base * (growth ^ level))
+
+            return level + 10
+        end,
+    },
+
+    EssenceValue = {
+        Name = "Essence Value",
+        Description = "Essences per purification",
+        MaxLevel = 25,
+        Category = "Upgrades",
+        Currency = "Dark Essences",
+        EffectPerLevel = function(level)
+            return level
+        end,
+        CostFunc = function(level)
+            return 1
         end,
     },
 }

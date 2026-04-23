@@ -8,6 +8,32 @@ local Signal = require(ReplicatedStorage.Packages.Signal)
 local BoostConfig = require(ReplicatedStorage.Shared.Configs.BoostConfig)
 
 local MEDITATION_RADIUS = 60 -- studs
+local MAX_FINITE = 1.79e308 -- largest finite double; anything beyond becomes math.huge
+
+local function sanitize(value: number): number
+    if value ~= value then return 0 end -- NaN
+    if value == math.huge then return MAX_FINITE end
+    if value == -math.huge then return 0 end
+    return value
+end
+
+-- Add `amount` to `current` and guarantee the result actually grows when amount > 0.
+-- At very high magnitudes a double loses precision and `current + amount == current`.
+-- In that case we bump up by one representable step so progression never stalls.
+local function addWithPrecisionFloor(current: number, amount: number): number
+    if amount <= 0 then
+        return sanitize(current + amount)
+    end
+    local added = current + amount
+    if added > current then
+        return sanitize(added)
+    end
+    local nudged = current * (1 + 2^-50)
+    if nudged <= current then
+        nudged = current + math.max(1, current * 2^-40)
+    end
+    return sanitize(nudged)
+end
 
 local AwarenessService = Knit.CreateService {
     Name = "AwarenessService",
@@ -62,6 +88,10 @@ end
 function AwarenessService:InitializePlayer(player, profile)
     --print(`Awareness for player {player.Name} is {profile.Data.Awareness}`)
 
+    -- Repair previously corrupted infinity/NaN values
+    profile.Data.Awareness      = sanitize(profile.Data.Awareness or 0)
+    profile.Data.AwarenessTotal = sanitize(profile.Data.AwarenessTotal or 0)
+
     local randomGenerator = Random.new(os.clock())
     local meditationGrounds = workspace:WaitForChild("Map"):WaitForChild("MeditationGrounds")
 
@@ -101,13 +131,13 @@ function AwarenessService:InitializePlayer(player, profile)
             if inRange then
                 local increment = self.UpgradeService:GetUpgradeEffect(player, "AwarenessPerMeditation")
                 local multiplier = self.MultiplierService:GetMultiplier(player, "Awareness")
-                local finalIncrement = math.round(increment * multiplier)
+                local finalIncrement = sanitize(math.round(increment * multiplier))
 
                 -- "Deep Thought Chance"
                 local deepThoughtChance = self.UpgradeService:GetUpgradeEffect(player, "IncreaseDeepThoughtChance")
                 local isDeepThought = false
                 if randomGenerator:NextInteger(1, 100) < deepThoughtChance then
-                    finalIncrement *= 3
+                    finalIncrement = sanitize(finalIncrement * 3)
                     self.Client.DeepThoughtEffect:Fire(player)
                     isDeepThought = true
                 end
@@ -137,8 +167,9 @@ end
 function AwarenessService:AddAwareness(player: Player, amount: number, isDeepThought: boolean): number
     local profile = self.DataService:GetProfile(player)
     if not profile then return 0 end
-    profile.Data.Awareness += amount
-    profile.Data.AwarenessTotal = (profile.Data.AwarenessTotal or 0) + amount
+    amount = sanitize(amount)
+    profile.Data.Awareness      = addWithPrecisionFloor(profile.Data.Awareness or 0, amount)
+    profile.Data.AwarenessTotal = addWithPrecisionFloor(profile.Data.AwarenessTotal or 0, amount)
     self.AwarenessChanged:Fire(player, profile.Data.Awareness, isDeepThought)
     self.Client.AwarenessTotalChanged:Fire(player, profile.Data.AwarenessTotal)
     self.AwarenessEarned:Fire(player, amount)

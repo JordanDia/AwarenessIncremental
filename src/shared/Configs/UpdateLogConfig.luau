@@ -1,6 +1,16 @@
 -- Add new entries to the TOP of this list (most recent first)
 return {
     {
+        Version = "v1.0.4",
+        Title   = "Astral Projection Update",
+        Date    = "April 19th, 2026",
+        Bullets = {
+            "Added Astral Projection, unlocks at awakening level 6",
+            "Added Essences and Dark Essences",
+            "Bug fixes",
+        },
+    },
+    {
         Version = "v1.0.3",
         Title   = "Crystal Collection Update",
         Date    = "April 15th, 2026",
