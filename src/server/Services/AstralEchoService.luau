@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local AstralEchoService = Knit.CreateService {
     Name = "AstralEchoService",
@@ -53,41 +54,35 @@ function AstralEchoService:KnitStart()
 end
 
 function AstralEchoService:GetEchoes(player)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return 0 end
-    return profile.Data.AstralEchoes or 0
+    return self.DataService:GetQN(player, "AstralEchoes")
 end
 
 function AstralEchoService:AddEchoes(player, amount)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    profile.Data.AstralEchoes = (profile.Data.AstralEchoes or 0) + amount
-    profile.Data.AstralEchoesTotal = (profile.Data.AstralEchoesTotal or 0) + amount
-
-    self.EchoesChanged:Fire(player, profile.Data.AstralEchoes)
-    self.EchoesTotalChanged:Fire(player, profile.Data.AstralEchoesTotal)
+    local newEchoes = self.DataService:AddQN(player, "AstralEchoes", amount)
+    local newTotal  = self.DataService:AddQN(player, "AstralEchoesTotal", amount)
+    self.EchoesChanged:Fire(player, newEchoes)
+    self.EchoesTotalChanged:Fire(player, newTotal)
 end
 
 function AstralEchoService:RemoveEchoes(player, amount)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    profile.Data.AstralEchoes = math.max(0, (profile.Data.AstralEchoes or 0) - amount)
-
-    self.EchoesChanged:Fire(player, profile.Data.AstralEchoes)
+    local current = self.DataService:GetQN(player, "AstralEchoes")
+    local diff = num.sub(current, amount)
+    local newEchoes = num.isPositive(diff) and diff or num.fromNumber(0)
+    self.DataService:SetQN(player, "AstralEchoes", newEchoes)
+    self.EchoesChanged:Fire(player, newEchoes)
 end
 
 function AstralEchoService:ResetEchoes(player)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    profile.Data.AstralEchoes = 0
-    self.EchoesChanged:Fire(player, 0)
+    local zero = num.fromNumber(0)
+    self.DataService:SetQN(player, "AstralEchoes", zero)
+    self.EchoesChanged:Fire(player, zero)
 end
 
 function AstralEchoService:OnEchoCollected(player)
     local value = self.UpgradeService:GetUpgradeEffect(player, "AstralEchoValue")
     local multiplier = self.MultiplierService:GetMultiplier(player, "AstralEcho")
 
-    local finalValue = math.round(value * multiplier)
+    local finalValue = num.mul(num.fromNumber(value), multiplier)
 
     self:AddEchoes(player, finalValue)
     self.LevelService:AddXP(player, 4)

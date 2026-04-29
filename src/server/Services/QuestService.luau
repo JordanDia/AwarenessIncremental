@@ -2,6 +2,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
+local Quicknum = require(ReplicatedStorage.Shared.Modules.Quicknum)
+
 local QuestConfig = require(ReplicatedStorage.Shared.Configs.QuestConfig)
 
 local RESET_INTERVAL = 86400 -- 24 hours in seconds
@@ -45,7 +47,8 @@ function QuestService:_addProgress(player, questId, amount)
     if data.Claimed[questId] then return end -- already claimed, ignore
 
     local current = data.Progress[questId] or 0
-    local newProgress = math.min(current + amount, questCfg.Goal)
+    local amountN = type(amount) == "buffer" and math.floor(Quicknum.toNumber(amount)) or amount
+    local newProgress = math.min(current + amountN, questCfg.Goal)
     data.Progress[questId] = newProgress
 
     if newProgress >= questCfg.Goal then

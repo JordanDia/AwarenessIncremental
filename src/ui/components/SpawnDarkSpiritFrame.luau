@@ -1,7 +1,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion      = require(ReplicatedStorage.Packages.Fusion)
-local FormatNumber = require(ReplicatedStorage.Packages.FormatNumber).Simple.FormatCompact
+local FormatNumber = require(ReplicatedStorage.Shared.Modules.FormatQN)
 local DarkSpiritConfig = require(ReplicatedStorage.Shared.Configs.DarkSpiritConfig)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
+
+local function qnToDouble(v)
+	if type(v) ~= "buffer" then return v or 0 end
+	local d = num.toNumber(v)
+	return (d == math.huge or d ~= d) and 1e308 or d
+end
 
 -- Props:
 --   Essences         Value<number>
@@ -46,17 +53,17 @@ return function(scope, props)
     local canAfford = scope:Computed(function(use)
         if use(props.Summons) < 1 then return false end
         if freeInStudio then return true end
-        return use(props.Essences)      >= cost.Essences
-            and use(props.Awareness)    >= cost.Awareness
-            and use(props.Crystals)     >= cost.Crystals
-            and use(props.AstralEchoes) >= cost.AstralEchoes
-            and use(props.Rebirths)     >= cost.Rebirths
+        return qnToDouble(use(props.Essences))      >= cost.Essences
+            and qnToDouble(use(props.Awareness))    >= cost.Awareness
+            and qnToDouble(use(props.Crystals))     >= cost.Crystals
+            and qnToDouble(use(props.AstralEchoes)) >= cost.AstralEchoes
+            and qnToDouble(use(props.Rebirths))     >= cost.Rebirths
     end)
 
     local function CostLine(label, valueKey, costAmount, color)
         local meetsReq = scope:Computed(function(use)
             if freeInStudio then return true end
-            return use(props[valueKey]) >= costAmount
+            return qnToDouble(use(props[valueKey])) >= costAmount
         end)
 
         local textValue = FormatNumber(costAmount) .. " " .. label

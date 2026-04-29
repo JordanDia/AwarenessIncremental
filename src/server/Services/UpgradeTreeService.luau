@@ -3,6 +3,13 @@ local Players           = game:GetService("Players")
 local AnalyticsService  = game:GetService("AnalyticsService")
 local Knit   = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local num    = require(ReplicatedStorage.Shared.Modules.Quicknum)
+
+local function qnToDouble(v)
+	if type(v) ~= "buffer" then return v or 0 end
+	local d = num.toNumber(v)
+	return (d == math.huge or d ~= d) and 1e308 or d
+end
 
 local UpgradeTreeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeTreeConfig)
 
@@ -124,26 +131,22 @@ function UpgradeTreeService:KnitStart()
         },
         Essences = {
             Get = function(player)
-                local profile = self.DataService:GetProfile(player)
-                return profile and (profile.Data.Essences or 0) or 0
+                return qnToDouble(self.DataService:GetQN(player, "Essences"))
             end,
             Remove = function(player, amount)
-                local profile = self.DataService:GetProfile(player)
-                if not profile then return end
-                profile.Data.Essences = (profile.Data.Essences or 0) - amount
-                self.AstralProjectionService.Client.EssencesChanged:Fire(player, profile.Data.Essences)
+                local newEssences = num.sub(self.DataService:GetQN(player, "Essences"), amount)
+                self.DataService:SetQN(player, "Essences", newEssences)
+                self.AstralProjectionService.Client.EssencesChanged:Fire(player, newEssences)
             end,
         },
         ["Dark Essences"] = {
             Get = function(player)
-                local profile = self.DataService:GetProfile(player)
-                return profile and (profile.Data.DarkEssences or 0) or 0
+                return qnToDouble(self.DataService:GetQN(player, "DarkEssences"))
             end,
             Remove = function(player, amount)
-                local profile = self.DataService:GetProfile(player)
-                if not profile then return end
-                profile.Data.DarkEssences = (profile.Data.DarkEssences or 0) - amount
-                self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, profile.Data.DarkEssences)
+                local newDark = num.sub(self.DataService:GetQN(player, "DarkEssences"), amount)
+                self.DataService:SetQN(player, "DarkEssences", newDark)
+                self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, newDark)
             end,
         },
     }
@@ -251,7 +254,7 @@ function UpgradeTreeService:CanAffordNode(player, treeName, nodeId)
     for _, cost in costs do
         local handler = self.CurrencyHandlers[cost.Currency]
         if not handler then return false end
-        if handler.Get(player) < cost.Amount then return false end
+        if qnToDouble(handler.Get(player)) < cost.Amount then return false end
     end
     return true
 end
@@ -382,29 +385,27 @@ function UpgradeTreeService:ComputeDynamicValue(player, source)
         return math.max(1, self.LevelService:GetLevel(player))
 
     elseif source == "CrystalCount" then
-        local crystals = self.CrystalService:GetCrystals(player)
+        local crystals = qnToDouble(self.CrystalService:GetCrystals(player))
         -- formula: 1 + log10(1 + crystals) * 1.4  →  at 100B gives ~16x
         return 1 + math.log(1 + crystals, 10) * 1.4
 
     elseif source == "RebirthCount" then
-        local rebirths = self.RebirthService:GetRebirths(player)
+        local rebirths = qnToDouble(self.RebirthService:GetRebirths(player))
         -- formula: 1 + log10(1 + rebirths) * 1.4
         return 1 + math.log(1 + rebirths, 10) * 1.4
 
     elseif source == "AstralEchoCount" then
-        local echoes = self.AstralEchoService:GetEchoes(player)
+        local echoes = qnToDouble(self.AstralEchoService:GetEchoes(player))
         -- formula: 1 + log10(1 + echoes) * 1.4
         return 1 + math.log(1 + echoes, 10) * 1.4
 
     elseif source == "EssenceCount" then
-        local profile = self.DataService:GetProfile(player)
-        local essences = profile and (profile.Data.Essences or 0) or 0
+        local essences = qnToDouble(self.DataService:GetQN(player, "Essences"))
         -- formula: 1 + log10(1 + essences) * 1.4
         return 1 + math.log(1 + essences, 10) * 1.4
 
     elseif source == "DarkEssenceCount" then
-        local profile = self.DataService:GetProfile(player)
-        local dark = profile and (profile.Data.DarkEssences or 0) or 0
+        local dark = qnToDouble(self.DataService:GetQN(player, "DarkEssences"))
         -- formula: 1 + log10(1 + dark) * 1.4
         return 1 + math.log(1 + dark, 10) * 1.4
     end

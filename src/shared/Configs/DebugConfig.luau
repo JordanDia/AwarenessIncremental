@@ -2,9 +2,9 @@ return {
 
     -- Set to true to apply massive multipliers for fast testing.
     -- NEVER ship with this enabled.
-    Enabled = false,
+    Enabled = true,
 
-    Multiplier = 1e6,
+    Multiplier = 1000,
 
     -- Which stats to boost
     Stats = {

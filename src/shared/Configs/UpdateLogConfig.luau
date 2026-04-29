@@ -1,6 +1,14 @@
 -- Add new entries to the TOP of this list (most recent first)
 return {
     {
+        Version = "v1.0.5",
+        Title   = "Patch update",
+        Date    = "April 23th, 2026",
+        Bullets = {
+            "Fixed bug where numbers had limits"
+        },
+    },
+    {
         Version = "v1.0.4",
         Title   = "Astral Projection Update",
         Date    = "April 19th, 2026",

@@ -3,6 +3,7 @@ local Players           = game:GetService("Players")
 local AnalyticsService  = game:GetService("AnalyticsService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local AwakeningConfig = require(ReplicatedStorage.Shared.Configs.AwakeningConfig)
 
@@ -116,7 +117,7 @@ function AwakeningService:CanAwaken(player)
     if level >= AwakeningConfig.MaxLevel then return false end
     local cost = self:GetNextCost(player)
     if cost == math.huge then return false end
-    return self.AwarenessService:GetAwareness(player) >= cost
+    return num.gte(self.AwarenessService:GetAwareness(player), num.fromNumber(cost))
 end
 
 -- Prestige-reset Awareness / Rebirths / Crystals / AstralEchoes, advance level, grant reward.
@@ -251,7 +252,13 @@ function AwakeningService:_StartAutoRebirth(player, rate)
     task.spawn(function()
         while self.PlayerAlive[player] do
             local rebirths = self.RebirthService:GetRebirths(player)
-            local gain = if rebirths > 0 then math.max(2, math.round(rebirths * rate)) else 0
+            local gain
+            if num.gt(rebirths, 0) then
+                local computed = num.mul(rebirths, num.fromNumber(rate))
+                gain = num.lt(computed, num.fromNumber(2)) and num.fromNumber(2) or num.floor(computed)
+            else
+                gain = num.fromNumber(0)
+            end
             self.RebirthService:AddRebirths(player, gain)
             task.wait(1)
         end

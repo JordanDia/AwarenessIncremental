@@ -3,6 +3,7 @@ local Players           = game:GetService("Players")
 local AnalyticsService  = game:GetService("AnalyticsService")
 local Knit   = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local num    = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local REBIRTH_COST = 1000 -- Awareness per rebirth
 
@@ -48,34 +49,27 @@ function RebirthService:KnitStart()
 end
 
 -- Initialize the player's rebirth data
-function RebirthService:SetupPlayer(player, profile)
-	local rebirths = profile.Data.Rebirths or 0
-	self.Client.RebirthsChanged:Fire(player, rebirths)
-
-	local potentialRebirths = self:GetRebirthsToGain(player)
-	self.Client.RebirthsToGainUpdated:Fire(player, potentialRebirths)
+function RebirthService:SetupPlayer(player, _profile)
+	self.Client.RebirthsChanged:Fire(player, self.DataService:GetQN(player, "Rebirths"))
+	self.Client.RebirthsToGainUpdated:Fire(player, self:GetRebirthsToGain(player))
 end
 
--- Get how many rebirths the player currently has
+-- Returns the live Quicknum buffer for the player's Rebirths.
 function RebirthService:GetRebirths(player)
-	local profile = self.DataService:GetProfile(player)
-	if not profile then return 0 end
-	
-	return profile.Data.Rebirths or 0
+	return self.DataService:GetQN(player, "Rebirths")
 end
 
--- Get how many rebirths they would gain if they rebirthed now
+-- Returns a Quicknum buffer: floor(awareness / REBIRTH_COST)
 function RebirthService:GetRebirthsToGain(player)
 	local awareness = self.AwarenessService:GetAwareness(player)
-	return math.floor(awareness / REBIRTH_COST)
+	return num.floor(num.div(awareness, REBIRTH_COST))
 end
 
--- Accounts for upgrade multiplier
+-- Accounts for upgrade multiplier; returns a Quicknum buffer.
 function RebirthService:GetTotalRebirthsToGain(player)
-    local baseRebirths = self:GetRebirthsToGain(player)
-    local multiplier = self.MultiplierService:GetMultiplier(player, "Rebirth")
-
-    return math.floor(baseRebirths * multiplier)
+	local baseRebirths = self:GetRebirthsToGain(player)
+	local multiplier   = self.MultiplierService:GetMultiplier(player, "Rebirth")
+	return num.floor(num.mul(baseRebirths, multiplier))
 end
 -- Get the cost per rebirth
 function RebirthService:GetRebirthCost()
@@ -84,45 +78,40 @@ end
 
 -- Check if player can rebirth
 function RebirthService:CanRebirth(player)
-	local awarenessForRebirth = self:GetRebirthsToGain(player)
-	return awarenessForRebirth > 0
+	return num.gt(self:GetRebirthsToGain(player), 0)
 end
 
 -- Perform the rebirth
 function RebirthService:PerformRebirth(player)
 	local profile = self.DataService:GetProfile(player)
-	if not profile then 
+	if not profile then
 		warn("No profile for player:", player.Name)
-		return false 
-	end
-
-	-- Check if they can rebirth
-	if not self:CanRebirth(player) then
-		--warn("Player cannot rebirth:", player.Name)
 		return false
 	end
 
-	local _rebirthsToGain = self:GetRebirthsToGain(player)
+	if not self:CanRebirth(player) then
+		return false
+	end
+
 	local multipliedRebirths = self:GetTotalRebirthsToGain(player)
 
-	-- Deduct reset awareness
 	self.AwarenessService:SetAwareness(player, 0)
-	-- Add rebirths
-	profile.Data.Rebirths = (profile.Data.Rebirths or 0) + multipliedRebirths
-	profile.Data.RebirthsTotal = (profile.Data.RebirthsTotal or 0) + multipliedRebirths
+
+	local newRebirths = num.add(self.DataService:GetQN(player, "Rebirths"), multipliedRebirths)
+	local newTotal    = num.add(self.DataService:GetQN(player, "RebirthsTotal"), multipliedRebirths)
+	self.DataService:SetQN(player, "Rebirths", newRebirths)
+	self.DataService:SetQN(player, "RebirthsTotal", newTotal)
 
 	profile.Data.Upgrades.AwarenessPerMeditation = 1
 	profile.Data.Upgrades.MeditationSpeed = 1
 
-	-- Fire events
-	self.RebirthsChanged:Fire(player, profile.Data.Rebirths)
-	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
-	self.Client.RebirthsTotalChanged:Fire(player, profile.Data.RebirthsTotal)
-	self.Client.RebirthsToGainUpdated:Fire(player, 0) -- Reset to 0 after rebirth
+	self.RebirthsChanged:Fire(player, newRebirths)
+	self.Client.RebirthsChanged:Fire(player, newRebirths)
+	self.Client.RebirthsTotalChanged:Fire(player, newTotal)
+	self.Client.RebirthsToGainUpdated:Fire(player, num.fromNumber(0))
 
 	self.RebirthPerformed:Fire(player, multipliedRebirths)
 
-	-- Log first rebirth analytics event (one-time)
 	if not profile.Data.Analytics_FirstRebirth then
 		profile.Data.Analytics_FirstRebirth = true
 		pcall(function()
@@ -130,41 +119,33 @@ function RebirthService:PerformRebirth(player)
 		end)
 	end
 
-
-
 	return true
 end
 
 function RebirthService:RemoveRebirths(player, amount)
-	local profile = self.DataService:GetProfile(player)
-	if not profile then return false end
-
-	if profile.Data.Rebirths < amount then
-		return false
-	end
-
-	profile.Data.Rebirths = profile.Data.Rebirths - amount
-	self.RebirthsChanged:Fire(player, profile.Data.Rebirths)
-	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
+	local current = self.DataService:GetQN(player, "Rebirths")
+	local amountBuf = type(amount) == "buffer" and amount or num.fromNumber(amount)
+	if num.lt(current, amountBuf) then return false end
+	local newRebirths = num.sub(current, amountBuf)
+	self.DataService:SetQN(player, "Rebirths", newRebirths)
+	self.RebirthsChanged:Fire(player, newRebirths)
+	self.Client.RebirthsChanged:Fire(player, newRebirths)
 	return true
 end
 
 function RebirthService:AddRebirths(player, amount)
-	local profile = self.DataService:GetProfile(player)
-	if not profile then return end
-	profile.Data.Rebirths = (profile.Data.Rebirths or 0) + amount
-	profile.Data.RebirthsTotal = (profile.Data.RebirthsTotal or 0) + amount
-	self.RebirthsChanged:Fire(player, profile.Data.Rebirths)
-	self.Client.RebirthsChanged:Fire(player, profile.Data.Rebirths)
-	self.Client.RebirthsTotalChanged:Fire(player, profile.Data.RebirthsTotal)
+	local newRebirths = self.DataService:AddQN(player, "Rebirths", amount)
+	local newTotal    = self.DataService:AddQN(player, "RebirthsTotal", amount)
+	self.RebirthsChanged:Fire(player, newRebirths)
+	self.Client.RebirthsChanged:Fire(player, newRebirths)
+	self.Client.RebirthsTotalChanged:Fire(player, newTotal)
 end
 
 function RebirthService:ResetRebirths(player)
-	local profile = self.DataService:GetProfile(player)
-	if not profile then return end
-	profile.Data.Rebirths = 0
-	self.RebirthsChanged:Fire(player, 0)
-	self.Client.RebirthsChanged:Fire(player, 0)
+	local zero = num.fromNumber(0)
+	self.DataService:SetQN(player, "Rebirths", zero)
+	self.RebirthsChanged:Fire(player, zero)
+	self.Client.RebirthsChanged:Fire(player, zero)
 end
 
 -- =======================
@@ -183,7 +164,7 @@ function RebirthService.Client:GetTotalRebirthsToGain(player)
 	return self.Server:GetTotalRebirthsToGain(player)
 end
 
-function RebirthService.Client:GetRebirthCost(player)
+function RebirthService.Client:GetRebirthCost(_player)
 	return self.Server:GetRebirthCost()
 end
 

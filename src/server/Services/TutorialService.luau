@@ -5,6 +5,8 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local TutorialConfig = require(ReplicatedStorage.Shared.Configs.TutorialConfig)
 local STAGES = TutorialConfig.Stages
 
+local Quicknum = require(ReplicatedStorage.Shared.Modules.Quicknum)
+
 local TutorialService = Knit.CreateService {
     Name = "TutorialService",
     Client = {
@@ -37,7 +39,7 @@ function TutorialService:_GetProgress(player)
     if not stage then return 0 end
 
     if stage.Type == "Awareness" then
-        return math.min(self.AwarenessService:GetAwareness(player), stage.Goal)
+        return math.min(Quicknum.toNumber(self.AwarenessService:GetAwareness(player)), stage.Goal)
 
     elseif stage.Type == "UpgradeLevel" then
         return math.min(self.UpgradeService:GetLevel(player, stage.UpgradeId), stage.Goal)

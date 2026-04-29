@@ -20,15 +20,13 @@ AwarenessController.AwarenessService = nil
 function AwarenessController:KnitStart()
     self.AwarenessService = Knit.GetService("AwarenessService")
 
-    local lastAwareness = self.AwarenessService:GetAwareness() or 0
-    self.AwarenessService.AwarenessChanged:Connect(function(awareness, isDeepThought)
-
-        if awareness > lastAwareness then
-            self:ShowFloatingText(awareness - lastAwareness, isDeepThought)
-            PopSound:Play()
-        end
-
-        lastAwareness = awareness
+    -- Floating text is driven by the server-sent gain amount, not by comparing the
+    -- new/old awareness buffers. At very high awareness, Quicknum precision
+    -- (THRESHOLD=53 bits) silently discards small gains so the total stops changing
+    -- even though gain is happening — delta comparison would miss those ticks.
+    self.AwarenessService.AwarenessGained:Connect(function(amount, isDeepThought)
+        self:ShowFloatingText(amount, isDeepThought)
+        PopSound:Play()
     end)
 
     self.AwarenessService.DeepThoughtEffect:Connect(function()

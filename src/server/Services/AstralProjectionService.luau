@@ -4,6 +4,7 @@ local AnalyticsService  = game:GetService("AnalyticsService")
 local UpgradeService = require("./UpgradeService")
 local DarkSpiritConfig = require(ReplicatedStorage.Shared.Configs.DarkSpiritConfig)
 local Knit              = require(ReplicatedStorage.Packages.Knit)
+local num               = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local DEFAULT_WALKSPEED = 16
 local DEFAULT_JUMPPOWER = 50
@@ -70,19 +71,17 @@ function AstralProjectionService:KnitInit()
 end
 
 function AstralProjectionService:AddEssences(player: Player, amount: number)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    local multiplied = amount * self.MultiplierService:GetMultiplier(player, "Essences")
-    profile.Data.Essences = (profile.Data.Essences or 0) + multiplied
-    self.Client.EssencesChanged:Fire(player, profile.Data.Essences)
+    if not self.DataService:GetProfile(player) then return end
+    local multiplied = num.mul(num.fromNumber(amount), self.MultiplierService:GetMultiplier(player, "Essences"))
+    local newEssences = self.DataService:AddQN(player, "Essences", multiplied)
+    self.Client.EssencesChanged:Fire(player, newEssences)
 end
 
 function AstralProjectionService:AddDarkEssences(player: Player, amount: number)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    local multiplied = amount * self.MultiplierService:GetMultiplier(player, "DarkEssences")
-    profile.Data.DarkEssences = (profile.Data.DarkEssences or 0) + multiplied
-    self.Client.DarkEssencesChanged:Fire(player, profile.Data.DarkEssences)
+    if not self.DataService:GetProfile(player) then return end
+    local multiplied = num.mul(num.fromNumber(amount), self.MultiplierService:GetMultiplier(player, "DarkEssences"))
+    local newDark = self.DataService:AddQN(player, "DarkEssences", multiplied)
+    self.Client.DarkEssencesChanged:Fire(player, newDark)
 end
 
 function AstralProjectionService:_FireSummonsChanged(player: Player)
@@ -324,10 +323,8 @@ function AstralProjectionService.Client:GetSummons(player: Player): (number, num
     return self.Server:GetSummons(player)
 end
 
-function AstralProjectionService:GetEssences(player: Player): number
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return 0 end
-    return profile.Data.Essences or 0
+function AstralProjectionService:GetEssences(player: Player)
+    return self.DataService:GetQN(player, "Essences")
 end
 
 function AstralProjectionService.Client:PurifySpirit(player: Player)
@@ -335,14 +332,14 @@ function AstralProjectionService.Client:PurifySpirit(player: Player)
     self.Server:AddEssences(player, amount)
 end
 
+
+
 function AstralProjectionService.Client:GetEssences(player: Player): number
     return self.Server:GetEssences(player)
 end
 
-function AstralProjectionService:GetDarkEssences(player: Player): number
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return 0 end
-    return profile.Data.DarkEssences or 0
+function AstralProjectionService:GetDarkEssences(player: Player)
+    return self.DataService:GetQN(player, "DarkEssences")
 end
 
 function AstralProjectionService.Client:GetDarkEssences(player: Player): number
@@ -357,17 +354,18 @@ function AstralProjectionService.Client:SpawnDarkSpirit(player: Player)
     if not profile then return false end
 
     local data = profile.Data
+    local ds = self.Server.DataService
 
     -- Check summons
     if (data.Summons or 0) < 1 then return false end
 
     local cost = DarkSpiritConfig.SpawnCost
     if not DarkSpiritConfig.FreeInStudio then
-        if (data.Essences     or 0) < cost.Essences     then return false end
-        if (data.Awareness    or 0) < cost.Awareness    then return false end
-        if (data.Crystals     or 0) < cost.Crystals     then return false end
-        if (data.AstralEchoes or 0) < cost.AstralEchoes then return false end
-        if (data.Rebirths     or 0) < cost.Rebirths     then return false end
+        if num.lt(ds:GetQN(player, "Essences"),     cost.Essences)     then return false end
+        if num.lt(ds:GetQN(player, "Awareness"),    cost.Awareness)    then return false end
+        if num.lt(ds:GetQN(player, "Crystals"),     cost.Crystals)     then return false end
+        if num.lt(ds:GetQN(player, "AstralEchoes"), cost.AstralEchoes) then return false end
+        if num.lt(ds:GetQN(player, "Rebirths"),     cost.Rebirths)     then return false end
     end
 
     -- Consume one summon, enqueue regen time, and schedule the wake-up thread
@@ -385,14 +383,15 @@ function AstralProjectionService.Client:SpawnDarkSpirit(player: Player)
     srv.AwarenessService:RemoveAwareness(player, cost.Awareness)
     srv.CrystalService:RemoveCrystals(player, cost.Crystals)
     srv.AstralEchoService:RemoveEchoes(player, cost.AstralEchoes)
-    -- Rebirths are fully reset (consumed entirely)
-    srv.RebirthService:RemoveRebirths(player, data.Rebirths or 0)
-    -- Essences deducted via helper so multipliers are consistent
-    data.Essences = (data.Essences or 0) - cost.Essences
-    self.EssencesChanged:Fire(player, data.Essences)
+    -- Rebirths are fully consumed (spent entirely)
+    srv.RebirthService:RemoveRebirths(player, ds:GetQN(player, "Rebirths"))
+    -- Essences deducted directly
+    local newEssences = num.sub(ds:GetQN(player, "Essences"), cost.Essences)
+    ds:SetQN(player, "Essences", newEssences)
+    self.Server.Client.EssencesChanged:Fire(player, newEssences)
 
     self.Server._activeDarkSpirit[player] = true
-    self.DarkSpiritSpawned:Fire(player)
+    self.Server.Client.DarkSpiritSpawned:Fire(player)
     return true
 end
 

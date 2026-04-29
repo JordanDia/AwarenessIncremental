@@ -5,6 +5,7 @@ local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 local FloatingTextComponent = require(ReplicatedStorage.UI.components.FloatingText)
 
 local AUTO_COLLECT_TIMEOUT = 8 -- seconds before skipping a stuck crystal
@@ -28,8 +29,8 @@ function CrystalController:KnitStart()
 
     local lastCrystals = self.CrystalService:GetCrystals()
     self.CrystalService.CrystalsChanged:Connect(function(amount)
-        if amount > lastCrystals then
-            self:ShowFloatingText(amount - lastCrystals)
+        if num.gt(amount, lastCrystals) then
+            self:ShowFloatingText(num.sub(amount, lastCrystals))
         end
         lastCrystals = amount
     end)

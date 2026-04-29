@@ -6,40 +6,16 @@ local AnalyticsService  = game:GetService("AnalyticsService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local BoostConfig = require(ReplicatedStorage.Shared.Configs.BoostConfig)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local MEDITATION_RADIUS = 60 -- studs
-local MAX_FINITE = 1.79e308 -- largest finite double; anything beyond becomes math.huge
-
-local function sanitize(value: number): number
-    if value ~= value then return 0 end -- NaN
-    if value == math.huge then return MAX_FINITE end
-    if value == -math.huge then return 0 end
-    return value
-end
-
--- Add `amount` to `current` and guarantee the result actually grows when amount > 0.
--- At very high magnitudes a double loses precision and `current + amount == current`.
--- In that case we bump up by one representable step so progression never stalls.
-local function addWithPrecisionFloor(current: number, amount: number): number
-    if amount <= 0 then
-        return sanitize(current + amount)
-    end
-    local added = current + amount
-    if added > current then
-        return sanitize(added)
-    end
-    local nudged = current * (1 + 2^-50)
-    if nudged <= current then
-        nudged = current + math.max(1, current * 2^-40)
-    end
-    return sanitize(nudged)
-end
 
 local AwarenessService = Knit.CreateService {
     Name = "AwarenessService",
     Client = {
         AwarenessChanged      = Knit.CreateSignal(),
         AwarenessTotalChanged = Knit.CreateSignal(),
+        AwarenessGained       = Knit.CreateSignal(), -- fires (amount, isDeepThought) on every gain
         DeepThoughtEffect     = Knit.CreateSignal(),
         MeditationStarted     = Knit.CreateSignal(),
         MeditationStopped     = Knit.CreateSignal(),
@@ -85,12 +61,7 @@ function AwarenessService:KnitStart()
    
 end
 
-function AwarenessService:InitializePlayer(player, profile)
-    --print(`Awareness for player {player.Name} is {profile.Data.Awareness}`)
-
-    -- Repair previously corrupted infinity/NaN values
-    profile.Data.Awareness      = sanitize(profile.Data.Awareness or 0)
-    profile.Data.AwarenessTotal = sanitize(profile.Data.AwarenessTotal or 0)
+function AwarenessService:InitializePlayer(player, _profile)
 
     local randomGenerator = Random.new(os.clock())
     local meditationGrounds = workspace:WaitForChild("Map"):WaitForChild("MeditationGrounds")
@@ -131,13 +102,13 @@ function AwarenessService:InitializePlayer(player, profile)
             if inRange then
                 local increment = self.UpgradeService:GetUpgradeEffect(player, "AwarenessPerMeditation")
                 local multiplier = self.MultiplierService:GetMultiplier(player, "Awareness")
-                local finalIncrement = sanitize(math.round(increment * multiplier))
+                local finalIncrement = num.mul(num.fromNumber(increment), multiplier)
 
                 -- "Deep Thought Chance"
                 local deepThoughtChance = self.UpgradeService:GetUpgradeEffect(player, "IncreaseDeepThoughtChance")
                 local isDeepThought = false
                 if randomGenerator:NextInteger(1, 100) < deepThoughtChance then
-                    finalIncrement = sanitize(finalIncrement * 3)
+                    finalIncrement = num.mul(finalIncrement, num.fromNumber(3))
                     self.Client.DeepThoughtEffect:Fire(player)
                     isDeepThought = true
                 end
@@ -157,47 +128,45 @@ function AwarenessService:InitializePlayer(player, profile)
     end)
 end
 
--- Get Awareness for a player
-function AwarenessService:GetAwareness(player) : number
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return 0 end
-    return profile.Data.Awareness
+-- Returns the live Quicknum buffer for the player's Awareness.
+function AwarenessService:GetAwareness(player)
+    return self.DataService:GetQN(player, "Awareness")
 end
 
-function AwarenessService:AddAwareness(player: Player, amount: number, isDeepThought: boolean): number
+function AwarenessService:AddAwareness(player: Player, amount: number, isDeepThought: boolean)
     local profile = self.DataService:GetProfile(player)
-    if not profile then return 0 end
-    amount = sanitize(amount)
-    profile.Data.Awareness      = addWithPrecisionFloor(profile.Data.Awareness or 0, amount)
-    profile.Data.AwarenessTotal = addWithPrecisionFloor(profile.Data.AwarenessTotal or 0, amount)
-    self.AwarenessChanged:Fire(player, profile.Data.Awareness, isDeepThought)
-    self.Client.AwarenessTotalChanged:Fire(player, profile.Data.AwarenessTotal)
+    if not profile then return num.fromNumber(0) end
+    local newAwareness = self.DataService:AddQN(player, "Awareness", amount)
+    local newTotal     = self.DataService:AddQN(player, "AwarenessTotal", amount)
+    self.AwarenessChanged:Fire(player, newAwareness, isDeepThought)
+    self.Client.AwarenessTotalChanged:Fire(player, newTotal)
+    self.Client.AwarenessGained:Fire(player, amount, isDeepThought)
     self.AwarenessEarned:Fire(player, amount)
 
     -- Log first time reaching 250k awareness (one-time)
-    if not profile.Data.Analytics_Reached250kAwareness and profile.Data.AwarenessTotal >= 250000 then
+    if not profile.Data.Analytics_Reached250kAwareness and num.gte(newTotal, 250000) then
         profile.Data.Analytics_Reached250kAwareness = true
         pcall(function()
             AnalyticsService:LogFunnelStepEvent(player, "PlayerProgression", tostring(player.UserId), 1, "Reached 250k Awareness")
         end)
     end
-    return profile.Data.Awareness
+    return newAwareness
 end
 
-function AwarenessService:RemoveAwareness(player, amount: number)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    profile.Data.Awareness -= amount
-    self.AwarenessChanged:Fire(player, profile.Data.Awareness)
-    return profile.Data.Awareness
+function AwarenessService:RemoveAwareness(player, amount)
+    local amountBuf = type(amount) == "buffer" and amount or num.fromNumber(amount)
+    local current = self.DataService:GetQN(player, "Awareness")
+    local newAwareness = num.sub(current, amountBuf)
+    self.DataService:SetQN(player, "Awareness", newAwareness)
+    self.AwarenessChanged:Fire(player, newAwareness)
+    return newAwareness
 end
 
 function AwarenessService:SetAwareness(player, value: number)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    profile.Data.Awareness = value
-    self.AwarenessChanged:Fire(player, value)
-    return value
+    local buf = num.fromNumber(value)
+    self.DataService:SetQN(player, "Awareness", buf)
+    self.AwarenessChanged:Fire(player, buf)
+    return buf
 end
 
 function AwarenessService:ToggleMeditateAnywhereBoost(player)
@@ -218,9 +187,7 @@ function AwarenessService.Client:GetAwareness(player)
 end
 
 function AwarenessService.Client:GetAwarenessTotal(player)
-    local profile = self.Server.DataService:GetProfile(player)
-    if not profile then return 0 end
-    return profile.Data.AwarenessTotal or 0
+    return self.Server.DataService:GetQN(player, "AwarenessTotal")
 end
 
 -- Toggle Meditate Anywhere for a player. Returns (success, active).

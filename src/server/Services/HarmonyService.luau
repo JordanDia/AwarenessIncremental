@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local HarmonyService = Knit.CreateService {
     Name = "HarmonyService",
@@ -49,7 +50,7 @@ end
 function HarmonyService:AddHarmony(player: Player, amount: number)
     local profile = self.DataService:GetProfile(player)
     if not profile then return end
-    local multiplier = self.MultiplierService:GetMultiplier(player, "Harmony")
+    local multiplier = num.toNumber(self.MultiplierService:GetMultiplier(player, "Harmony"))
     local final = amount * multiplier
     profile.Data.Harmony = (profile.Data.Harmony or 0) + final
     profile.Data.HarmonyTotal = (profile.Data.HarmonyTotal or 0) + final
