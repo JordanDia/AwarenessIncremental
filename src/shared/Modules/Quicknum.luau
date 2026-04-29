@@ -1879,7 +1879,9 @@ end
 	Decodes n from the number returned by .lbencode()
 ]]
 function num.lbdecode(n)
-	if type(n) ~= "number"  then error("Wrong Type: lbdecode(), Input 1") end
+	if type(n) ~= "number"  then
+		error("Wrong Type: lbdecode(), Input 1")
+	end
 	local buf = buffer.create(16)
 	if n == 0 then 
 		return buf

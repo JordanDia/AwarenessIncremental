@@ -19,6 +19,10 @@ local AbilityButtonHolder = require("../components/AbilityButtonHolder")
 local ProfileFrame = require("../components/ProfileFrame")
 local ShopFrame = require("../components/ShopFrame")
 local DailyQuestsFrame = require("../components/DailyQuestsFrame")
+local RaidMoveBar = require("../components/RaidMoveBar")
+local RaidTimerFrame = require("../components/RaidTimerFrame")
+local RaidLeaderboard = require("../components/RaidLeaderboard")
+local RaidWarningFrame = require("../components/RaidWarningFrame")
 
 return function(parent)
     local scope = scoped(Fusion, {
@@ -32,6 +36,10 @@ return function(parent)
         ProfileFrame = ProfileFrame,
         ShopFrame = ShopFrame,
         DailyQuestsFrame = DailyQuestsFrame,
+        RaidMoveBar = RaidMoveBar,
+        RaidTimerFrame = RaidTimerFrame,
+        RaidLeaderboard = RaidLeaderboard,
+        RaidWarningFrame = RaidWarningFrame,
     })
 
 
@@ -297,6 +305,7 @@ return function(parent)
 
     local ZoneController    = Knit.GetController("ZoneController")
     local CrystalController = Knit.GetController("CrystalController")
+    local RaidController    = Knit.GetController("RaidController")
 
     local autoCollectVisible = scope:Value(false)
     local autoCollectActive  = scope:Value(false)
@@ -479,6 +488,37 @@ return function(parent)
                 AstralEchoesTotal = echoesTotalValue,
                 RobuxSpent = robuxSpentValue,
                 FirstPlayed = firstPlayedValue,
+            },
+
+            -- Raid UI
+            scope:RaidMoveBar {
+                Visible = scope:Computed(function(use)
+                    return use(RaidController.RaidState) == "Active"
+                end),
+                QueuedMoveIndex = RaidController.QueuedMoveIndex,
+                MoveCooldowns = RaidController.MoveCooldowns,
+                OnMoveActivated = function(index)
+                    RaidController:QueueMove(index)
+                end,
+            },
+
+            scope:RaidTimerFrame {
+                Visible = scope:Computed(function(use)
+                    local state = use(RaidController.RaidState)
+                    return state == "Active" or state == "Warning"
+                end),
+                RaidState = RaidController.RaidState,
+                SpiritHealth = RaidController.SpiritHealth,
+            },
+
+            scope:RaidLeaderboard {
+                Visible = RaidController.ShowLeaderboard,
+                Leaderboard = RaidController.Leaderboard,
+            },
+
+            scope:RaidWarningFrame {
+                Visible = RaidController.ShowWarning,
+                TimeRemaining = RaidController.WarningTime,
             },
 
         }
