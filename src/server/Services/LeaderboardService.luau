@@ -3,22 +3,24 @@ local DataStoreService  = game:GetService("DataStoreService")
 local Players           = game:GetService("Players")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local num  = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 -- OrderedDataStore names
-local STORE_AWARENESS = "LB_Awareness_v2"
-local STORE_REBIRTHS  = "LB_Rebirths_v2"
-local STORE_CRYSTALS  = "LB_Crystals_v2"
-local STORE_ECHOES    = "LB_AstralEchoes_v2"
+local STORE_AWARENESS = "LB_Awareness_v3"
+local STORE_REBIRTHS  = "LB_Rebirths_v3"
+local STORE_CRYSTALS  = "LB_Crystals_v3"
+local STORE_ECHOES    = "LB_AstralEchoes_v3"
 local STORE_ROBUX     = "LB_RobuxSpent"
 local STORE_PLAYTIME  = "LB_Playtime"
 
+-- qnField = true means the value is a Quicknum buffer; use lbencode/lbdecode
 local CATEGORIES = {
-    { id = "TopAwareness",    label = "Top Awareness",     storeId = STORE_AWARENESS, dataKey = "AwarenessTotal",    wholeNumber = true, maxValue = 1e99 },
-    { id = "TopRebirths",     label = "Top Rebirths",      storeId = STORE_REBIRTHS,  dataKey = "RebirthsTotal",     wholeNumber = true, maxValue = 1e30 },
-    { id = "TopCrystals",     label = "Top Crystals",      storeId = STORE_CRYSTALS,  dataKey = "CrystalsTotal",     wholeNumber = true, maxValue = 1e30 },
-    { id = "TopAstralEchoes", label = "Top Astral Echoes", storeId = STORE_ECHOES,    dataKey = "AstralEchoesTotal", wholeNumber = true, maxValue = 1e50 },
-    { id = "TopRobuxSpent",   label = "Top Robux Spent",   storeId = STORE_ROBUX,     dataKey = "RobuxSpent",        rawValue = true,    maxValue = 1e99 },
-    { id = "TopTimePlayed",   label = "Top Time Played",   storeId = STORE_PLAYTIME,  dataKey = "PlaytimeSeconds",   rawValue = true,    maxValue = 1e8  },
+    { id = "TopAwareness",    label = "Top Awareness",     storeId = STORE_AWARENESS, dataKey = "AwarenessTotal",    qnField = true  },
+    { id = "TopRebirths",     label = "Top Rebirths",      storeId = STORE_REBIRTHS,  dataKey = "RebirthsTotal",     qnField = true  },
+    { id = "TopCrystals",     label = "Top Crystals",      storeId = STORE_CRYSTALS,  dataKey = "CrystalsTotal",     qnField = true  },
+    { id = "TopAstralEchoes", label = "Top Astral Echoes", storeId = STORE_ECHOES,    dataKey = "AstralEchoesTotal", qnField = true  },
+    { id = "TopRobuxSpent",   label = "Top Robux Spent",   storeId = STORE_ROBUX,     dataKey = "RobuxSpent",        rawValue = true },
+    { id = "TopTimePlayed",   label = "Top Time Played",   storeId = STORE_PLAYTIME,  dataKey = "PlaytimeSeconds",   rawValue = true },
 }
 
 local BLOCKED_USER_IDS = {
@@ -69,31 +71,22 @@ for _, category in ipairs(CATEGORIES) do
     LeaderboardService._cache[category.id]  = {}
 end
 
-local LOG_BASE = 1.0000001
-
-local function encodeValue(value)
-    if value <= 0 then return 0 end
-    if value ~= value or value == math.huge then return 0 end -- NaN or inf guard
-    return math.floor(math.log(value) / math.log(LOG_BASE))
-end
-
-local function decodeValue(stored)
-    if stored == 0 then return 0 end
-    local result = LOG_BASE ^ stored
-    if result ~= result or result == math.huge then return nil end -- NaN or inf → exclude
-    return result
-end
-
 function LeaderboardService:_UpdatePlayerStats(player)
     local profile = self.DataService:GetProfile(player)
     if not profile then return end
 
     for _, category in ipairs(CATEGORIES) do
-        local raw = profile.Data[category.dataKey]
-        if raw == nil then continue end
-        if category.maxValue and raw > category.maxValue then continue end
+        local encoded
+        if category.qnField then
+            local buf = self.DataService:GetQN(player, category.dataKey)
+            if num.isZero(buf) then continue end
+            encoded = num.lbencode(buf)
+        else
+            local raw = profile.Data[category.dataKey]
+            if raw == nil or raw <= 0 then continue end
+            encoded = math.floor(raw)
+        end
         local store = self._stores[category.id]
-        local encoded = category.rawValue and math.floor(raw) or encodeValue(raw)
         local ok, err = pcall(function()
             store:SetAsync(tostring(player.UserId), encoded)
         end)
@@ -128,8 +121,8 @@ function LeaderboardService:_RefreshCategory(category)
         if not userId or userId <= 0 then continue end
         if BLOCKED_USER_IDS[userId] then continue end
         if entry.value <= 0 then continue end
-        local decoded = category.rawValue and entry.value or decodeValue(entry.value)
-        if not decoded then continue end
+        local decoded = category.rawValue and entry.value or num.lbdecode(entry.value)
+        if decoded == nil then continue end
         table.insert(valid, { userId = userId, value = decoded })
     end
 
@@ -161,7 +154,7 @@ function LeaderboardService:_RefreshCategory(category)
     for i, item in ipairs(valid) do
         if not names[i] then continue end -- skip if name resolution failed
         rank += 1
-        local displayValue = category.wholeNumber and math.round(item.value) or item.value
+        local displayValue = item.value
         table.insert(entries, {
             rank  = rank,
             name  = names[i],

@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local LevelService = Knit.CreateService {
     Name = "LevelService",
@@ -140,7 +141,7 @@ function LevelService:AddXP(player, amount)
     if not profile then return end
 
     -- Apply XP multiplier (e.g. from gamepasses)
-    local multiplier = self.MultiplierService:GetMultiplier(player, "XP")
+    local multiplier = num.toNumber(self.MultiplierService:GetMultiplier(player, "XP"))
     local final = amount * multiplier
 
     -- Add XP

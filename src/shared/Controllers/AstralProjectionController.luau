@@ -4,6 +4,7 @@ local RunService        = game:GetService("RunService")
 local SoundService      = game:GetService("SoundService")
 local TweenService      = game:GetService("TweenService")
 local Knit              = require(ReplicatedStorage.Packages.Knit)
+local num               = require(ReplicatedStorage.Shared.Modules.Quicknum)
 local Fusion          = require(ReplicatedStorage.Packages.Fusion)
 local SpiritHealthBar = require("../../UI/components/SpiritHealthBar")
 local scoped = Fusion.scoped
@@ -138,19 +139,17 @@ function AstralProjectionController:KnitStart()
     end)
 
     AstralProjectionService.EssencesChanged:Connect(function(newTotal)
-        local delta = newTotal - _lastEssences
-        _lastEssences = newTotal
-        if delta > 0 then
-            showFloatingText(delta, Color3.fromRGB(255, 255, 255))
+        if num.gt(newTotal, _lastEssences) then
+            showFloatingText(num.sub(newTotal, _lastEssences), Color3.fromRGB(255, 255, 255))
         end
+        _lastEssences = newTotal
     end)
 
     AstralProjectionService.DarkEssencesChanged:Connect(function(newTotal)
-        local delta = newTotal - _lastDarkEssences
-        _lastDarkEssences = newTotal
-        if delta > 0 then
-            showFloatingText(delta, Color3.fromRGB(220, 30, 30))
+        if num.gt(newTotal, _lastDarkEssences) then
+            showFloatingText(num.sub(newTotal, _lastDarkEssences), Color3.fromRGB(220, 30, 30))
         end
+        _lastDarkEssences = newTotal
     end)
 
     AstralProjectionService.ProjectionStarted:Connect(function()

@@ -1,6 +1,13 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
+
+local function qnToDouble(v)
+	if type(v) ~= "buffer" then return v or 0 end
+	local d = num.toNumber(v)
+	return (d == math.huge or d ~= d) and 1e308 or d
+end
 
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local scoped = Fusion.scoped
@@ -110,8 +117,8 @@ return function(parent)
         local canAfford = scope:Computed(function(use)
             if use(level) >= maxLevel then return false end
             local c = use(cost)
-            local b = use(balance)
-            if type(c) ~= "number" or type(b) ~= "number" then return false end
+            local b = qnToDouble(use(balance))
+            if type(c) ~= "number" then return false end
             return b >= c
         end)
         return {

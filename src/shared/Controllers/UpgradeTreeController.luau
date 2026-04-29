@@ -1,7 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
-local FormatNumber = require(ReplicatedStorage.Packages.FormatNumber).Simple.FormatCompact
+local FormatNumber = require(ReplicatedStorage.Shared.Modules.FormatQN)
 local UpgradeTreeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeTreeConfig)
 local UpgradeTreeFrame = require(ReplicatedStorage.UI.components.UpgradeTreeFrame)
 

@@ -1,8 +1,15 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
-local FormatNumber = require(ReplicatedStorage.Packages.FormatNumber).Simple.FormatCompact
+local FormatNumber = require(ReplicatedStorage.Shared.Modules.FormatQN)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local AwakeningConfig = require(ReplicatedStorage.Shared.Configs.AwakeningConfig)
+
+local function qnToDouble(v)
+	if type(v) ~= "buffer" then return v or 0 end
+	local d = num.toNumber(v)
+	return (d == math.huge or d ~= d) and 1e308 or d
+end
 
 local MAX_LEVEL = AwakeningConfig.MaxLevel
 
@@ -22,7 +29,7 @@ return function(scope, props)
         local level = use(props.AwakeningLevel)
         if level >= MAX_LEVEL then return false end
         local cost = AwakeningConfig.Levels[level + 1].Cost
-        return use(props.Awareness) >= cost
+        return qnToDouble(use(props.Awareness)) >= cost
     end)
 
     local costText = scope:Computed(function(use)

@@ -3,6 +3,15 @@ local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local UpgradeConfig = require(ReplicatedStorage.Shared.Configs.UpgradeConfig)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
+
+-- Converts a Quicknum buffer (or plain number) to a double for cost comparisons.
+-- Huge values (> double max) are clamped to 1e308 so finite costs always pass.
+local function qnToDouble(v)
+	if type(v) ~= "buffer" then return v or 0 end
+	local d = num.toNumber(v)
+	return (d == math.huge or d ~= d) and 1e308 or d
+end
 
 -- Upgrades that feed into MultiplierService. Maps upgradeId -> { stat, source }
 local MULTIPLIER_MAP = {
@@ -107,43 +116,41 @@ function UpgradeService:BuyUpgrade(player, upgradeId)
 	local canAfford = false
 	if config.Currency == "Awareness" then
 		local awareness = self.AwarenessService:GetAwareness(player)
-		if awareness >= cost then
+		if qnToDouble(awareness) >= cost then
 			--print("Taking away", cost, "awareness for upgrade", upgradeId)
 			self.AwarenessService:RemoveAwareness(player, cost)
 			canAfford = true
 		end
 	elseif config.Currency == "Rebirths" then
-		local rebirths = self.RebirthService:GetRebirths(player)
-		if rebirths >= cost then
-			-- Deduct rebirths (you'll need to add this method to RebirthService)
+		if qnToDouble(self.RebirthService:GetRebirths(player)) >= cost then
 			self.RebirthService:RemoveRebirths(player, cost)
 			canAfford = true
 		end
 
 	elseif config.Currency == "Crystals" then
-		local crystals = self.CrystalService:GetCrystals(player)
-		if crystals >= cost then
+		if qnToDouble(self.CrystalService:GetCrystals(player)) >= cost then
 			self.CrystalService:RemoveCrystals(player, cost)
 			canAfford = true
 		end
 	elseif config.Currency == "AstralEchoes" then
-		local echoes = self.AstralEchoService:GetEchoes(player)
-		if echoes >= cost then
+		if qnToDouble(self.AstralEchoService:GetEchoes(player)) >= cost then
 			self.AstralEchoService:RemoveEchoes(player, cost)
 			canAfford = true
 		end
 	elseif config.Currency == "Essences" then
-		local essences = profile and (profile.Data.Essences or 0) or 0
-		if essences >= cost then
-			profile.Data.Essences = essences - cost
-			self.AstralProjectionService.Client.EssencesChanged:Fire(player, profile.Data.Essences)
+		local ds = self.DataService
+		if qnToDouble(ds:GetQN(player, "Essences")) >= cost then
+			local newEssences = num.sub(ds:GetQN(player, "Essences"), cost)
+			ds:SetQN(player, "Essences", newEssences)
+			self.AstralProjectionService.Client.EssencesChanged:Fire(player, newEssences)
 			canAfford = true
 		end
 	elseif config.Currency == "Dark Essences" then
-		local dark = profile and (profile.Data.DarkEssences or 0) or 0
-		if dark >= cost then
-			profile.Data.DarkEssences = dark - cost
-			self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, profile.Data.DarkEssences)
+		local ds = self.DataService
+		if qnToDouble(ds:GetQN(player, "DarkEssences")) >= cost then
+			local newDark = num.sub(ds:GetQN(player, "DarkEssences"), cost)
+			ds:SetQN(player, "DarkEssences", newDark)
+			self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, newDark)
 			canAfford = true
 		end
 	end
@@ -178,20 +185,20 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 	local totalCost = 0
 	local levelsToBuy = 0
 
-	-- Get current currency amount
+	-- Get current currency amount as a plain double for cost loop arithmetic
 	local currentCurrency = 0
 	if config.Currency == "Awareness" then
-		currentCurrency = self.AwarenessService:GetAwareness(player)
+		currentCurrency = qnToDouble(self.AwarenessService:GetAwareness(player))
 	elseif config.Currency == "Rebirths" then
-		currentCurrency = self.RebirthService:GetRebirths(player)
+		currentCurrency = qnToDouble(self.RebirthService:GetRebirths(player))
 	elseif config.Currency == "Crystals" then
-		currentCurrency = self.CrystalService:GetCrystals(player)
+		currentCurrency = qnToDouble(self.CrystalService:GetCrystals(player))
 	elseif config.Currency == "AstralEchoes" then
-		currentCurrency = self.AstralEchoService:GetEchoes(player)
+		currentCurrency = qnToDouble(self.AstralEchoService:GetEchoes(player))
 	elseif config.Currency == "Essences" then
-		currentCurrency = profile.Data.Essences or 0
+		currentCurrency = qnToDouble(self.DataService:GetQN(player, "Essences"))
 	elseif config.Currency == "Dark Essences" then
-		currentCurrency = profile.Data.DarkEssences or 0
+		currentCurrency = qnToDouble(self.DataService:GetQN(player, "DarkEssences"))
 	end
 
 	-- Calculate how many levels we can buy
@@ -222,21 +229,24 @@ function UpgradeService:BuyMaxUpgrade(player, upgradeId)
 
 	-- Only proceed if we can buy at least one level
 	if levelsToBuy > 0 then
+		local totalCostBuf = num.fromNumber(totalCost)
 		-- Deduct currency once
 		if config.Currency == "Awareness" then
-			self.AwarenessService:RemoveAwareness(player, totalCost)
+			self.AwarenessService:RemoveAwareness(player, totalCostBuf)
 		elseif config.Currency == "Rebirths" then
-			self.RebirthService:RemoveRebirths(player, totalCost)
+			self.RebirthService:RemoveRebirths(player, totalCostBuf)
 		elseif config.Currency == "Crystals" then
-			self.CrystalService:RemoveCrystals(player, totalCost)
+			self.CrystalService:RemoveCrystals(player, totalCostBuf)
 		elseif config.Currency == "AstralEchoes" then
-			self.AstralEchoService:RemoveEchoes(player, totalCost)
+			self.AstralEchoService:RemoveEchoes(player, totalCostBuf)
 		elseif config.Currency == "Essences" then
-			profile.Data.Essences = (profile.Data.Essences or 0) - totalCost
-			self.AstralProjectionService.Client.EssencesChanged:Fire(player, profile.Data.Essences)
+			local newEssences = num.sub(self.DataService:GetQN(player, "Essences"), totalCostBuf)
+			self.DataService:SetQN(player, "Essences", newEssences)
+			self.AstralProjectionService.Client.EssencesChanged:Fire(player, newEssences)
 		elseif config.Currency == "Dark Essences" then
-			profile.Data.DarkEssences = (profile.Data.DarkEssences or 0) - totalCost
-			self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, profile.Data.DarkEssences)
+			local newDark = num.sub(self.DataService:GetQN(player, "DarkEssences"), totalCostBuf)
+			self.DataService:SetQN(player, "DarkEssences", newDark)
+			self.AstralProjectionService.Client.DarkEssencesChanged:Fire(player, newDark)
 		end
 
 		-- Update level once

@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local MultiplierService = Knit.CreateService {
     Name = "MultiplierService",
@@ -13,12 +14,13 @@ MultiplierService.MultiplierChanged = Signal.new() -- (player, stat, finalMultip
 -- Structure: Multipliers[player][stat][source] = value
 MultiplierService.Multipliers = {}
 
-function MultiplierService:_ApplyWalkSpeed(player: Player, multiplier: number)
+function MultiplierService:_ApplyWalkSpeed(player: Player, multiplier)
     local character = player.Character
     if not character then return end
     local humanoid = character:FindFirstChildOfClass("Humanoid")
     if not humanoid then return end
-    humanoid.WalkSpeed = 16 * multiplier
+    local m = type(multiplier) == "buffer" and num.toNumber(multiplier) or multiplier
+    humanoid.WalkSpeed = 16 * m
 end
 
 function MultiplierService:KnitStart()
@@ -75,19 +77,16 @@ function MultiplierService:RemoveSource(player: Player, stat: string, source: st
     self:_Recalculate(player, stat)
 end
 
--- Get the final combined multiplier for a stat. Returns 1 if no sources are registered
-function MultiplierService:GetMultiplier(player: Player, stat: string): number
+-- Get the final combined multiplier for a stat as a Quicknum buffer.
+-- Returns num.fromNumber(1) if no sources are registered.
+function MultiplierService:GetMultiplier(player: Player, stat: string)
     local playerTable = self.Multipliers[player]
-    if not playerTable or not playerTable[stat] then return 1 end
+    if not playerTable or not playerTable[stat] then return num.fromNumber(1) end
 
-    local result = 1
+    local result = num.fromNumber(1)
     for _, value in playerTable[stat] do
         if value ~= value or value == math.huge then continue end
-        result *= value
-        if result == math.huge then
-            result = 1e300
-            break
-        end
+        result = num.mul(result, num.fromNumber(value))
     end
 
     return result
@@ -120,8 +119,8 @@ function MultiplierService:ResetPlayer(player: Player)
     self.Multipliers[player] = {}
 end
 
--- Client: read-only access to their own multipliers
-function MultiplierService.Client:GetMultiplier(player: Player, stat: string): number
+-- Client: read-only access to their own multipliers (returns buffer)
+function MultiplierService.Client:GetMultiplier(player: Player, stat: string)
     return self.Server:GetMultiplier(player, stat)
 end
 

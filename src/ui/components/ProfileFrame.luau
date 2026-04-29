@@ -1,7 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
-local FormatNumber = require(ReplicatedStorage.Packages.FormatNumber).Simple.FormatCompact
+local FormatNumber = require(ReplicatedStorage.Shared.Modules.FormatQN)
 
 -- Props:
 --   Visible           (boolean | Value<boolean>)

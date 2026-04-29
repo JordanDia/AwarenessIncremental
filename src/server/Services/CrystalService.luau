@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local CrystalService = Knit.CreateService {
     Name = "CrystalService",
@@ -53,34 +54,29 @@ function CrystalService:KnitStart()
 end
 
 function CrystalService:GetCrystals(player)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return 0 end
-    return profile.Data.Crystals or 0
+    return self.DataService:GetQN(player, "Crystals")
 end
 
 function CrystalService:AddCrystals(player, amount)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    profile.Data.Crystals = (profile.Data.Crystals or 0) + amount
-    profile.Data.CrystalsTotal = (profile.Data.CrystalsTotal or 0) + amount
-
-    self.CrystalsChanged:Fire(player, profile.Data.Crystals)
-    self.CrystalsTotalChanged:Fire(player, profile.Data.CrystalsTotal)
+    local newCrystals = self.DataService:AddQN(player, "Crystals", amount)
+    local newTotal    = self.DataService:AddQN(player, "CrystalsTotal", amount)
+    self.CrystalsChanged:Fire(player, newCrystals)
+    self.CrystalsTotalChanged:Fire(player, newTotal)
 end
 
 function CrystalService:RemoveCrystals(player, amount)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    profile.Data.Crystals = math.max(0, (profile.Data.Crystals or 0) - amount)
-
-    self.CrystalsChanged:Fire(player, profile.Data.Crystals)
+    local current = self.DataService:GetQN(player, "Crystals")
+    local newCrystals = num.isPositive(num.sub(current, amount))
+        and num.sub(current, amount)
+        or num.fromNumber(0)
+    self.DataService:SetQN(player, "Crystals", newCrystals)
+    self.CrystalsChanged:Fire(player, newCrystals)
 end
 
 function CrystalService:ResetCrystals(player)
-    local profile = self.DataService:GetProfile(player)
-    if not profile then return end
-    profile.Data.Crystals = 0
-    self.CrystalsChanged:Fire(player, 0)
+    local zero = num.fromNumber(0)
+    self.DataService:SetQN(player, "Crystals", zero)
+    self.CrystalsChanged:Fire(player, zero)
 end
 
 function CrystalService:OnCrystalCollected(player)
@@ -91,7 +87,7 @@ function CrystalService:OnCrystalCollected(player)
     local treeMultiplier = self.MultiplierService:GetMultiplier(player, "CrystalValue")
     local comboMultiplier = self.CrystalComboService:ApplyAndGetCombo(player)
 
-    local finalValue = math.round(value * upgradeMultiplier * treeMultiplier * comboMultiplier)
+    local finalValue = num.mul(num.fromNumber(value * upgradeMultiplier * comboMultiplier), treeMultiplier)
 
     self:AddCrystals(player, finalValue)
     LevelService:AddXP(player, 1)

@@ -203,10 +203,10 @@ function num.lt(n1, n2)
 		error("Wrong Type: lt(), Input 2")
 	end
 	local sign1 = math.sign(m1)
-	local sign2 = math.sign(m1)
+	local sign2 = math.sign(m2)
 	if sign1 < sign2 then return true
 	elseif sign1 > sign2 then return false
-	elseif e1 == e2 then return n1 < n2
+	elseif e1 == e2 then return m1 < m2
 	else return e1 < e2 end
 end
 --[[
@@ -231,7 +231,7 @@ function num.lte(n1, n2)
 		error("Wrong Type: lte(), Input 2")
 	end
 	local sign1 = math.sign(m1)
-	local sign2 = math.sign(m1)
+	local sign2 = math.sign(m2)
 	if sign1 < sign2 then return true
 	elseif sign1 > sign2 then return false
 	elseif e1 == e2 then return n1 <= n2
@@ -259,7 +259,7 @@ function num.gt(n1, n2)
 		error("Wrong Type: gt(), Input 2")
 	end
 	local sign1 = math.sign(m1)
-	local sign2 = math.sign(m1)
+	local sign2 = math.sign(m2)
 	if sign1 > sign2 then return true
 	elseif sign1 < sign2 then return false
 	elseif e1 == e2 then return m1 > m2
@@ -287,7 +287,7 @@ function num.gte(n1, n2)
 		error("Wrong Type: gte(), Input 2")
 	end
 	local sign1 = math.sign(m1)
-	local sign2 = math.sign(m1)
+	local sign2 = math.sign(m2)
 	if sign1 > sign2 then return true
 	elseif sign1 < sign2 then return false
 	elseif e1 == e2 then return m1 >= m2

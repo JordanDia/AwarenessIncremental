@@ -1,6 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local BadgeService_Roblox = game:GetService("BadgeService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local num = require(ReplicatedStorage.Shared.Modules.Quicknum)
 
 local BadgeConfig = require(ReplicatedStorage.Shared.Configs.BadgeConfig)
 
@@ -33,7 +34,7 @@ function BadgeService:KnitStart()
 
     -- First meditation: player gains any awareness for the first time
     AwarenessService.AwarenessChanged:Connect(function(player, newAwareness)
-        if newAwareness >= 1 then
+        if num.gte(newAwareness, 1) then
             local profile = DataService:GetProfile(player)
             if profile and not profile.Data.Badges_FirstMeditation then
                 profile.Data.Badges_FirstMeditation = true
@@ -83,7 +84,7 @@ function BadgeService:KnitStart()
 
     -- First astral echo collected
     AstralEchoService.EchoesChanged:Connect(function(player, echoes)
-        if echoes >= 1 then
+        if num.gte(echoes, 1) then
             local profile = DataService:GetProfile(player)
             if profile and not profile.Data.Badges_FirstAstralEcho then
                 profile.Data.Badges_FirstAstralEcho = true
