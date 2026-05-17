@@ -22,6 +22,7 @@ local DailyQuestsFrame = require("../components/DailyQuestsFrame")
 local RaidMoveBar = require("../components/RaidMoveBar")
 local RaidTimerFrame = require("../components/RaidTimerFrame")
 local RaidLeaderboard = require("../components/RaidLeaderboard")
+local RaidLiveLeaderboard = require("../components/RaidLiveLeaderboard")
 local RaidWarningFrame = require("../components/RaidWarningFrame")
 
 return function(parent)
@@ -39,6 +40,7 @@ return function(parent)
         RaidMoveBar = RaidMoveBar,
         RaidTimerFrame = RaidTimerFrame,
         RaidLeaderboard = RaidLeaderboard,
+        RaidLiveLeaderboard = RaidLiveLeaderboard,
         RaidWarningFrame = RaidWarningFrame,
     })
 
@@ -497,6 +499,7 @@ return function(parent)
                 end),
                 QueuedMoveIndex = RaidController.QueuedMoveIndex,
                 MoveCooldowns = RaidController.MoveCooldowns,
+                UnlockedMoves = RaidController.UnlockedMoves,
                 OnMoveActivated = function(index)
                     RaidController:QueueMove(index)
                 end,
@@ -505,15 +508,26 @@ return function(parent)
             scope:RaidTimerFrame {
                 Visible = scope:Computed(function(use)
                     local state = use(RaidController.RaidState)
-                    return state == "Active" or state == "Warning"
+                    return state == "Active"
                 end),
                 RaidState = RaidController.RaidState,
                 SpiritHealth = RaidController.SpiritHealth,
+                MaxSpiritHealth = RaidController.MaxSpiritHealth,
+                CurrentWave = RaidController.CurrentWave,
+                TotalWaves = RaidController.TotalWaves,
             },
 
             scope:RaidLeaderboard {
                 Visible = RaidController.ShowLeaderboard,
                 Leaderboard = RaidController.Leaderboard,
+                Success = RaidController.RaidSuccess,
+            },
+
+            scope:RaidLiveLeaderboard {
+                Visible = scope:Computed(function(use)
+                    return use(RaidController.RaidState) == "Active"
+                end),
+                Leaderboard = RaidController.LiveLeaderboard,
             },
 
             scope:RaidWarningFrame {

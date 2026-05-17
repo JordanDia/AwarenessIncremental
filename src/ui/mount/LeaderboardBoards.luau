@@ -41,6 +41,24 @@ local CATEGORIES = {
         dataKey    = "PlaytimeSeconds",
         color      = Color3.fromRGB(230, 130, 50),
     },
+    {
+        id         = "TopEssences",
+        label      = "Top Essences",
+        dataKey    = "Essences",
+        color      = Color3.fromRGB(255, 255, 255),
+    },
+    {
+        id         = "TopDarkEssences",
+        label      = "Top Dark Essences",
+        dataKey    = "DarkEssences",
+        color      = Color3.fromRGB(255, 60, 60),
+    },
+    {
+        id         = "TopRaidWins",
+        label      = "Top Raid Wins",
+        dataKey    = "RaidWins",
+        color      = Color3.fromRGB(255, 180, 50),
+    },
 }
 
 local function formatValue(categoryId, value)

@@ -21,7 +21,7 @@ local QN_FIELDS = {
 local DataService = Knit.CreateService{
 	Name = "DataService",
 	Client = {
-		DataLoaded = Knit.CreateSignal()
+		DataLoaded = Knit.CreateSignal(),
 	}
 }
 
@@ -29,7 +29,7 @@ DataService.Profiles = {}
 DataService.ProfileLoaded = Signal.new()
 DataService._qnCache = {} -- [player] = { field = buffer }
 
-local CLEAR_DATA_ON_LEAVE = true
+local CLEAR_DATA_ON_LEAVE = false
 
 local PROFILE_TEMPLATE = {
 	Awareness = "0",
@@ -39,6 +39,9 @@ local PROFILE_TEMPLATE = {
 	Essences = "0",
 	DarkEssences = "0",
 	AwakeningLevel = 0,
+
+	Fragments = 0,
+	RaidShopBoosts = {},
 
 	Summons = 1,
 	MaxSummons = 1,
@@ -55,6 +58,7 @@ local PROFILE_TEMPLATE = {
 	Level = 1,
 	PlaytimeSeconds = 0,
 	RobuxSpent = 0,
+	RaidWins = 0,
 
 	LastMeditateAnywhereBoost = 0,
 	LastMeditationSpeedBoost  = 0,

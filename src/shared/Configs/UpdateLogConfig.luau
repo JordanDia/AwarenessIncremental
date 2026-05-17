@@ -1,6 +1,16 @@
 -- Add new entries to the TOP of this list (most recent first)
 return {
     {
+        Version = "v1.1.0",
+        Title   = "Raids Update",
+        Date    = "May 7th, 2026",
+        Bullets = {
+            "Raids update",
+            "Win raids for fragments",
+            "Buy fragment upgrades",
+        },
+    },
+    {
         Version = "v1.0.5",
         Title   = "Patch update",
         Date    = "April 23th, 2026",

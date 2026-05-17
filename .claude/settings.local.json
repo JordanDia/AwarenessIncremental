@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find c:/Dev/RobloxProjects/AwarenessIncremental -path */kumarion* -name *.lua*)"
+      "Bash(find c:/Dev/RobloxProjects/AwarenessIncremental -path */kumarion* -name *.lua*)",
+      "Bash(rtk ls *)",
+      "Bash(Get-ChildItem -Path src -Recurse -Filter *.lua)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "PowerShell(New-Item *)"
     ]
   }
 }

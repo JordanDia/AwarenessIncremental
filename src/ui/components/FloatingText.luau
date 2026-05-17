@@ -13,7 +13,7 @@ return function(scope, props)
             scope:New "TextLabel" {
                 Size = UDim2.fromScale(1, 1),
                 BackgroundTransparency = 1,
-                Text = "+" .. FormatNumber(props.Amount, ".##"),
+                Text = (props.Prefix or "+") .. FormatNumber(props.Amount, ".##"),
                 FontFace = Font.fromName(
                     "Montserrat",
                     Enum.FontWeight.Bold

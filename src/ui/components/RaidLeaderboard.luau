@@ -78,19 +78,38 @@ return function(scope: Fusion.Scope, props)
 			-- Title
 			scope:New "TextLabel" {
 				Name = "Title",
-				Size = UDim2.new(1, 0, 0, 40),
+				Size = UDim2.new(1, 0, 0, 30),
 				BackgroundTransparency = 1,
-				Text = "RAID COMPLETE",
-				TextColor3 = Color3.fromRGB(255, 215, 0),
+				Text = scope:Computed(function(use)
+					return use(props.Success) and "RAID COMPLETE" or "RAID FAILED"
+				end),
+				TextColor3 = scope:Computed(function(use)
+					return use(props.Success) and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(255, 80, 80)
+				end),
 				TextScaled = true,
 				FontFace = Font.fromName("Montserrat", Enum.FontWeight.Bold),
+			},
+
+			-- Reward
+			scope:New "TextLabel" {
+				Name = "Reward",
+				Size = UDim2.new(1, 0, 0, 20),
+				Position = UDim2.new(0, 0, 0, 28),
+				BackgroundTransparency = 1,
+				Text = scope:Computed(function(use)
+					local fragments = use(props.Success) and 5 or 1
+					return "You received " .. fragments .. " fragments!"
+				end),
+				TextColor3 = Color3.fromRGB(180, 180, 255),
+				TextScaled = true,
+				FontFace = Font.fromName("Montserrat", Enum.FontWeight.SemiBold),
 			},
 
 			-- Entries container
 			scope:New "ScrollingFrame" {
 				Name = "EntriesContainer",
-				Size = UDim2.new(0.95, 0, 1, -50),
-				Position = UDim2.new(0.5, 0, 0, 45),
+				Size = UDim2.new(0.95, 0, 1, -60),
+				Position = UDim2.new(0.5, 0, 0, 55),
 				AnchorPoint = Vector2.new(0.5, 0),
 				BackgroundTransparency = 1,
 				ScrollBarThickness = 4,

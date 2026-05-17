@@ -1,21 +1,36 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
-local RaidConfig = require(ReplicatedStorage.Shared.Configs.RaidConfig)
 
 -- Props:
 --   Visible: Value<boolean>
 --   RaidState: Value<string>
 --   SpiritHealth: Value<number>
+--   MaxSpiritHealth: Value<number>
+--   CurrentWave: Value<number>
+--   TotalWaves: Value<number>
 
 return function(scope: Fusion.Scope, props)
 	local healthPct = scope:Computed(function(use)
-		return math.clamp(use(props.SpiritHealth) / RaidConfig.SpiritHealth, 0, 1)
+		local max = use(props.MaxSpiritHealth)
+		if max <= 0 then return 0 end
+		return math.clamp(use(props.SpiritHealth) / max, 0, 1)
+	end)
+
+	local healthColor = scope:Computed(function(use)
+		local pct = use(healthPct)
+		if pct < 0.15 then
+			return Color3.fromRGB(255, 80, 80)
+		elseif pct < 0.35 then
+			return Color3.fromRGB(255, 200, 80)
+		else
+			return Color3.fromRGB(100, 200, 100)
+		end
 	end)
 
 	local stateText = scope:Computed(function(use)
 		local state = use(props.RaidState)
 		if state == "Active" then
-			return "RAID ACTIVE"
+			return "Wave " .. use(props.CurrentWave) .. "/" .. use(props.TotalWaves)
 		elseif state == "Warning" then
 			return "RAID STARTING SOON"
 		else
@@ -77,7 +92,7 @@ return function(scope: Fusion.Scope, props)
 						Size = scope:Spring(scope:Computed(function(use)
 							return UDim2.new(use(healthPct), 0, 1, 0)
 						end), 10, 0.8),
-						BackgroundColor3 = Color3.fromRGB(100, 200, 100),
+						BackgroundColor3 = scope:Spring(healthColor, 8, 1),
 
 						[Fusion.Children] = {
 							scope:New "UICorner" {
@@ -95,7 +110,7 @@ return function(scope: Fusion.Scope, props)
 				Position = UDim2.fromOffset(0, 58),
 				BackgroundTransparency = 1,
 				Text = scope:Computed(function(use)
-					return "Spirit HP: " .. math.floor(use(props.SpiritHealth)) .. "/" .. RaidConfig.SpiritHealth
+					return "Spirit HP: " .. math.floor(use(props.SpiritHealth)) .. "/" .. math.floor(use(props.MaxSpiritHealth))
 				end),
 				TextColor3 = Color3.fromRGB(200, 200, 200),
 				TextScaled = true,

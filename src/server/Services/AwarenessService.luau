@@ -39,6 +39,7 @@ function AwarenessService:KnitStart()
     self.LevelService = Knit.GetService("LevelService")
     self.MultiplierService = Knit.GetService("MultiplierService")
     self.GamepassService = Knit.GetService("GamepassService")
+    self.RaidService = Knit.GetService("RaidService")
 
     self.DataService.ProfileLoaded:Connect(function(player, profile)
         if not profile then return end
@@ -90,16 +91,19 @@ function AwarenessService:InitializePlayer(player, _profile)
                 end
             end
 
-            if inRange ~= wasInRange then
-                if inRange then
+            -- Pause meditation during raids
+            local canMeditate = inRange and self.RaidService.State ~= "Active"
+
+            if canMeditate ~= wasInRange then
+                if canMeditate then
                     self.Client.MeditationStarted:Fire(player)
                 else
                     self.Client.MeditationStopped:Fire(player)
                 end
-                wasInRange = inRange
+                wasInRange = canMeditate
             end
 
-            if inRange then
+            if canMeditate then
                 local increment = self.UpgradeService:GetUpgradeEffect(player, "AwarenessPerMeditation")
                 local multiplier = self.MultiplierService:GetMultiplier(player, "Awareness")
                 local finalIncrement = num.mul(num.fromNumber(increment), multiplier)

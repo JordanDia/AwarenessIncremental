@@ -5,7 +5,7 @@ return {
     SpawnCost = {
         Essences    = 200,
         Awareness   = 1e21,   -- 1S
-        Crystals    = 100e9,  -- 100B
+        Crystals    = 10e9,  -- 10B
         AstralEchoes = 5e9,   -- 5B
         Rebirths    = 1e21,   -- 1S
     },

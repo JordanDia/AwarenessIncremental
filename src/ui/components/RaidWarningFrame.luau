@@ -55,7 +55,9 @@ return function(scope: Fusion.Scope, props)
 				Position = UDim2.fromScale(0, 0.55),
 				BackgroundTransparency = 1,
 				Text = scope:Computed(function(use)
-					return "Starting in " .. math.ceil(use(props.TimeRemaining)) .. "s"
+					local t = math.ceil(use(props.TimeRemaining))
+					if t < 1 then t = 1 end
+					return "Starting in " .. t .. "s"
 				end),
 				TextColor3 = Color3.fromRGB(255, 200, 200),
 				TextScaled = true,

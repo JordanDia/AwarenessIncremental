@@ -12,6 +12,9 @@ local STORE_CRYSTALS  = "LB_Crystals_v3"
 local STORE_ECHOES    = "LB_AstralEchoes_v3"
 local STORE_ROBUX     = "LB_RobuxSpent"
 local STORE_PLAYTIME  = "LB_Playtime"
+local STORE_ESSENCES  = "LB_Essences_v1"
+local STORE_DARK_ESSENCES = "LB_DarkEssences_v1"
+local STORE_RAID_WINS = "LB_RaidWins_v1"
 
 -- qnField = true means the value is a Quicknum buffer; use lbencode/lbdecode
 local CATEGORIES = {
@@ -21,6 +24,9 @@ local CATEGORIES = {
     { id = "TopAstralEchoes", label = "Top Astral Echoes", storeId = STORE_ECHOES,    dataKey = "AstralEchoesTotal", qnField = true  },
     { id = "TopRobuxSpent",   label = "Top Robux Spent",   storeId = STORE_ROBUX,     dataKey = "RobuxSpent",        rawValue = true },
     { id = "TopTimePlayed",   label = "Top Time Played",   storeId = STORE_PLAYTIME,  dataKey = "PlaytimeSeconds",   rawValue = true },
+    { id = "TopEssences",     label = "Top Essences",      storeId = STORE_ESSENCES,  dataKey = "EssencesTotal",     qnField = true  },
+    { id = "TopDarkEssences", label = "Top Dark Essences", storeId = STORE_DARK_ESSENCES, dataKey = "DarkEssencesTotal", qnField = true },
+    { id = "TopRaidWins",     label = "Top Raid Wins",     storeId = STORE_RAID_WINS, dataKey = "RaidWins",          rawValue = true },
 }
 
 local BLOCKED_USER_IDS = {
@@ -165,9 +171,9 @@ function LeaderboardService:_RefreshCategory(category)
 end
 
 function LeaderboardService:_RefreshAllLeaderboards()
-    -- Refresh all categories in parallel; notify client as each one completes
-    for _, category in ipairs(CATEGORIES) do
-        task.spawn(function()
+    -- Stagger refreshes to avoid DataStore throttling (10s between each)
+    for i, category in ipairs(CATEGORIES) do
+        task.delay((i - 1) * 10, function()
             self:_RefreshCategory(category)
             self.Client.LeaderboardRefreshed:FireAll(category.id)
         end)
@@ -210,11 +216,11 @@ function LeaderboardService:KnitStart()
         end
     end)
 
-    -- Refresh immediately on start, then every 60s
+    -- Refresh immediately on start, then every 3 minutes
     task.spawn(function()
         self:_RefreshAllLeaderboards()
         while true do
-            task.wait(60)
+            task.wait(180)
             self:_RefreshAllLeaderboards()
         end
     end)
